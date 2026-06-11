@@ -1,0 +1,90 @@
+// src/app/analytics/page.jsx
+// ─────────────────────────────────────────────
+// ANALYTICS PAGE — progress charts and heatmap
+// Server component fetches data, client components render charts
+// ─────────────────────────────────────────────
+import { createServerClient } from "@/lib/supabase-server";
+import { redirect } from "next/navigation";
+import HeatmapCalendar from "@/components/analytics/HeatmapCalendar";
+import TrendChart from "@/components/analytics/TrendChart";
+
+export const metadata = { title: "Analytics" };
+
+export default async function AnalyticsPage() {
+  const supabase = createServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect("/onboarding");
+
+  // Last 365 days of check-ins
+  const oneYearAgo = new Date(Date.now() - 365 * 86_400_000).toISOString().split("T")[0];
+
+  const { data: checkIns } = await supabase
+    .from("check_ins")
+    .select("date, completed, habit_id")
+    .eq("user_id", user.id)
+    .gte("date", oneYearAgo)
+    .order("date", { ascending: true });
+
+  const { data: streaks } = await supabase
+    .from("streaks")
+    .select("current_streak, longest_streak")
+    .eq("user_id", user.id);
+
+  const currentStreak = streaks?.reduce((max, s) => Math.max(max, s.current_streak ?? 0), 0) ?? 0;
+  const longestStreak = streaks?.reduce((max, s) => Math.max(max, s.longest_streak ?? 0), 0) ?? 0;
+
+  const totalCompleted = (checkIns ?? []).filter((c) => c.completed).length;
+  const totalCheckIns  = (checkIns ?? []).length;
+  const completionRate = totalCheckIns === 0 ? 0 : Math.round((totalCompleted / totalCheckIns) * 100);
+
+  return (
+    <div className="px-4 pt-10 pb-6 flex flex-col gap-6">
+
+      <h1 className="text-2xl font-bold" style={{ color: "var(--color-bento-text)" }}>
+        Your progress
+      </h1>
+
+      {/* Stats row */}
+      <div className="grid grid-cols-3 gap-3">
+        {[
+          { label: "Completion", value: `${completionRate}%` },
+          { label: "Streak",     value: `${currentStreak}d` },
+          { label: "Best",       value: `${longestStreak}d` },
+        ].map((stat) => (
+          <div
+            key={stat.label}
+            className="flex flex-col items-center justify-center py-4 rounded-2xl"
+            style={{ background: "var(--color-bento-card)", border: "1px solid var(--color-bento-border)" }}
+          >
+            <span
+              className="text-2xl font-bold"
+              style={{ color: "var(--color--stryde-primary)" }}
+            >
+              {stat.value}
+            </span>
+            <span className="text-[11px] mt-0.5" style={{ color: "var(--color-bento-muted)" }}>
+              {stat.label}
+            </span>
+          </div>
+        ))}
+      </div>
+
+      {/* Heatmap */}
+      <section>
+        <h2 className="text-sm font-semibold mb-3" style={{ color: "var(--color-bento-text)" }}>
+          Activity this year
+        </h2>
+        <HeatmapCalendar checkIns={checkIns ?? []} />
+      </section>
+
+      {/* Trend chart */}
+      <section>
+        <h2 className="text-sm font-semibold mb-3" style={{ color: "var(--color-bento-text)" }}>
+          Weekly completion rate
+        </h2>
+        <TrendChart checkIns={checkIns ?? []} />
+      </section>
+
+    </div>
+  );
+}
