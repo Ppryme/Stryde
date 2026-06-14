@@ -6,7 +6,7 @@
 // ─────────────────────────────────────────────
 import { createClient } from "@/lib/supabase-server";
 import { redirect } from "next/navigation";
-import CheckInList from "@/components/checkin/CheckInList";
+import CheckInList from "@/components/checkin/checkInList";
 
 export const metadata = { title: "Check in" };
 
