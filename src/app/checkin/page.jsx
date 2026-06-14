@@ -4,9 +4,9 @@
 // The core loop: user opens this and taps habits done
 // Server fetches habits + today's check-ins
 // ─────────────────────────────────────────────
-import { createServerClient } from "@/lib/supabase-server";
+import { createClient } from "@/lib/supabase-server";
 import { redirect } from "next/navigation";
-import CheckInList from "@/components/checkin/CheckInList";
+import CheckInList from "@/components/checkin/checkInList";
 
 export const metadata = { title: "Check in" };
 
@@ -18,7 +18,7 @@ function getGreeting() {
 }
 
 export default async function CheckInPage() {
-  const supabase = createServerClient();
+  const  supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/onboarding");
 
