@@ -43,6 +43,9 @@ export default function OnboardingPage() {
       ? await signIn(email, password)
       : await signUp(email, password, name);
 
+    console.log("AUTH DATA:", data);
+    console.log("AUTH ERROR:", authError);
+
     if (authError) {
       setError(authError.message);
       setLoading(false);
@@ -63,11 +66,24 @@ export default function OnboardingPage() {
 
   // ── Step 3: Save first habit + redirect ──────
   async function handleFinish() {
+    const supabase = getSupabase();
     if (!habitName.trim()) { setError("Give your habit a name."); return; }
     setLoading(true);
 
-    const supabase = getSupabase();
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+
+    console.log("FINISH USER:", user);
+    console.log("FINISH USER ERROR:", userError);
+
+
+    if (!user) {
+      setError("No authenticated user found.");
+      setLoading(false);
+      return;
+    }
 
     await supabase.from("habits").insert({
       user_id:      user.id,
@@ -86,7 +102,7 @@ export default function OnboardingPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col px-6 pt-16 pb-10">
+    <div className="min-h-screen flex flex-col lg:max-w-6xl px-6 pt-16 pb-10 mx-auto">
 
       {/* Step indicator dots */}
       <div className="flex gap-2 justify-center mb-12">
@@ -274,7 +290,7 @@ export default function OnboardingPage() {
                 key={f}
                 onClick={() => setFrequency(f)}
                 className="flex-1 py-3 rounded-xl text-sm font-medium capitalize border transition-all"
-                style={{
+                style={{           
                   background: frequency === f ? "var(--color--stryde-primary-light)" : "transparent",
                   border:     `1px solid ${frequency === f ? "var(--color--stryde-primary)" : "var(--color-bento-border)"}`,
                   color:      frequency === f ? "var(--color--stryde-primary-dark)" : "var(--color-bento-muted)",

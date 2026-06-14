@@ -7,6 +7,7 @@
 import { useOnline } from "@/hooks/useOnline";
 
 export default function OfflineBanner() {
+  
   const isOnline = useOnline();
   if (isOnline) return null;
 

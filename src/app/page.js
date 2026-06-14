@@ -4,7 +4,7 @@
 // Shows: greeting, progress ring, today's habits preview, streak summary
 // This is a SERVER component — data fetching happens here
 // ─────────────────────────────────────────────
-import { createServerClient } from "@/lib/supabase-server";
+import { createClient } from "@/lib/supabase-server";
 import { redirect } from "next/navigation";
 import ProgressRing from "@/components/ui/ProgressRing";
 import StreakBadge from "@/components/streaks/StreakBadge";
@@ -21,11 +21,17 @@ function getGreeting() {
 }
 
 export default async function DashboardPage() {
-  const supabase = createServerClient();
+  const supabase = await createClient();
 
   // ── Auth check ──────────────────────────────
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/onboarding");
+const {
+  data: { user },
+} = await supabase.auth.getUser();
+
+if (!user) {
+  redirect("/onboarding");
+}
+
 
   // ── Fetch today's habits ────────────────────
   const today = new Date().toISOString().split("T")[0]; // 'YYYY-MM-DD'
@@ -94,7 +100,7 @@ export default async function DashboardPage() {
       <section>
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-base font-semibold" style={{ color: "var(--color-bento-text)" }}>
-            Today's habits
+            Today&apos;s habits
           </h2>
           <a href="/habits" className="text-xs" style={{ color: "var(--color-stryde-primary)" }}>
             See all →

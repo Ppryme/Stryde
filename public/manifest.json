@@ -1,0 +1,10 @@
+{
+  "name": "Stryde",
+  "short_name": "Stryde",
+  "description": "Build streaks. Not excuses.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0F0E17",
+  "theme_color": "#534AB7",
+  "icons": []
+}

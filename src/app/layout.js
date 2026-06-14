@@ -8,12 +8,22 @@ import BottomTabBar from "@/components/ui/BottomTabBar";
 import OfflineBanner from "@/components/ui/OfflineBanner";
 
 export const metadata = {
-  title: { default: "Stryde", template: "%s | Stryde" },
+  title: "Stryde",
   description: "Build streaks. Not excuses.",
   manifest: "/manifest.json",
-  themeColor: "#534AB7",
-  appleWebApp: { capable: true, statusBarStyle: "black-translucent", title: "Stryde" },
+
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Stryde",
+  },
 };
+
+export const viewport = {
+  themeColor: "#0F0E17",
+};
+
+
 
 export default function RootLayout({ children }) {
   return (

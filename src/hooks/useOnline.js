@@ -1,27 +1,31 @@
-// src/hooks/useOnline.js
-// ─────────────────────────────────────────────
-// USE ONLINE — React hook that tracks network status
-// Returns true when online, false when offline
-// Listens to browser's online/offline events
-// ─────────────────────────────────────────────
 "use client";
 import { useState, useEffect } from "react";
 
 export function useOnline() {
-  const [isOnline, setIsOnline] = useState(
-    typeof navigator !== "undefined" ? navigator.onLine : true
-  );
+  const [isOnline, setIsOnline] = useState(true);
 
   useEffect(() => {
-    const goOnline  = () => setIsOnline(true);
-    const goOffline = () => setIsOnline(false);
+    const check = async () => {
+    try {
+            const res = await fetch("/api/health", {
+              method: "HEAD",      // or GET – either works
+              cache: "no-store",   // prevents caching of the response
+            });
+            setIsOnline(res.ok);
+          } catch {
+            setIsOnline(false);
+          }
+        };
 
-    window.addEventListener("online",  goOnline);
-    window.addEventListener("offline", goOffline);
+    check(); // initial check
+    const interval = setInterval(check, 30000); // every 30 sec
+    window.addEventListener("online", check);
+    window.addEventListener("offline", () => setIsOnline(false));
 
     return () => {
-      window.removeEventListener("online",  goOnline);
-      window.removeEventListener("offline", goOffline);
+      clearInterval(interval);
+      window.removeEventListener("online", check);
+      window.removeEventListener("offline", () => setIsOnline(false));
     };
   }, []);
 
