@@ -4,7 +4,7 @@
 // Server component — fetches from Supabase
 // Same pattern as habits/page.jsx
 // ─────────────────────────────────────────────
-import { createServerClient } from "@/lib/supabase-server";
+import { createClient } from "@/lib/supabase-server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import GoalCard from "@/components/goals/GoalCard";
@@ -13,7 +13,7 @@ import EmptyState from "@/components/ui/EmptyState";
 export const metadata = { title: "Goals" };
 
 export default async function GoalsPage() {
-  const supabase = createServerClient();
+  const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/onboarding");
 

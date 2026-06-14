@@ -3,7 +3,7 @@
 // ANALYTICS PAGE — progress charts and heatmap
 // Server component fetches data, client components render charts
 // ─────────────────────────────────────────────
-import { createServerClient } from "@/lib/supabase-server";
+import { createClient } from "@/lib/supabase-server";
 import { redirect } from "next/navigation";
 import HeatmapCalendar from "@/components/analytics/HeatmapCalendar";
 import TrendChart from "@/components/analytics/TrendChart";
@@ -11,7 +11,7 @@ import TrendChart from "@/components/analytics/TrendChart";
 export const metadata = { title: "Analytics" };
 
 export default async function AnalyticsPage() {
-  const supabase = createServerClient();
+  const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/onboarding");
 

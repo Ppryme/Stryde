@@ -3,7 +3,7 @@
 // HABITS LIST PAGE — shows all user habits
 // Server component — fetches from Supabase
 // ─────────────────────────────────────────────
-import { createServerClient } from "@/lib/supabase-server";
+import { createClient } from "@/lib/supabase-server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import HabitCard from "@/components/habits/HabitCard";
@@ -12,7 +12,7 @@ import EmptyState from "@/components/ui/EmptyState";
 export const metadata = { title: "Habits" };
 
 export default async function HabitsPage() {
-  const supabase = createServerClient();
+  const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/onboarding");
 
