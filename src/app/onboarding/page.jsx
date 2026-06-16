@@ -7,9 +7,8 @@
 // CLIENT component — has interactive steps
 // ─────────────────────────────────────────────
 "use client";
-import { useState } from "react";
+import { useState,useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { signUp, signIn, signInWithGoogle } from "@/lib/auth";
 import { getSupabase } from "@/lib/supabase";
 import { HABIT_CATEGORIES } from "@/lib/design-token";
 
@@ -17,15 +16,30 @@ const STEPS = ["account", "goal", "habit"];
 
 export default function OnboardingPage() {
   const router  = useRouter();
-  const [step, setStep]     = useState(0); // 0=account, 1=goal, 2=habit
-  const [isLogin, setIsLogin] = useState(false);
-  const [error, setError]   = useState("");
+  const [step, setStep]     = useState(1); // 0=account, 1=goal, 2=habit
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  // Step 1 state
-  const [name, setName]         = useState("");
-  const [email, setEmail]       = useState("");
-  const [password, setPassword] = useState("");
+  useEffect(() => {
+    async function checkUser() {
+      const supabase = await getSupabase();
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      router.push("/sign-in");
+      return;
+    }
+
+    if (user.user_metadata?.onboarded) {
+      router.push("/");
+    }
+  }
+
+  checkUser();
+}, []);
 
   // Step 2 state
   const [selectedCategory, setSelectedCategory] = useState("");
@@ -34,35 +48,9 @@ export default function OnboardingPage() {
   const [habitName, setHabitName]   = useState("");
   const [frequency, setFrequency]   = useState("daily");
 
-  // ── Step 1: Account ──────────────────────────
-  async function handleAuth() {
-    setLoading(true);
-    setError("");
+  
 
-    const { data, error: authError } = isLogin
-      ? await signIn(email, password)
-      : await signUp(email, password, name);
 
-    console.log("AUTH DATA:", data);
-    console.log("AUTH ERROR:", authError);
-
-    if (authError) {
-      setError(authError.message);
-      setLoading(false);
-      return;
-    }
-
-    setLoading(false);
-    setStep(1); // go to goal picker
-  }
-
-  async function handleGoogle() {
-    setLoading(true);
-    const { error: authError } = await signInWithGoogle();
-    if (authError) setError(authError.message);
-    setLoading(false);
-    // Google OAuth redirects away — callback route handles the rest
-  }
 
   // ── Step 3: Save first habit + redirect ──────
   async function handleFinish() {
@@ -95,7 +83,16 @@ export default function OnboardingPage() {
     });
 
     // Mark user as onboarded
-    await supabase.auth.updateUser({ data: { onboarded: true } });
+   const { error: updateError } =
+      await supabase.auth.updateUser({
+        data: { onboarded: true },
+      });
+
+    if (updateError) {
+      setError(updateError.message);
+      setLoading(false);
+      return;
+    }
 
     setLoading(false);
     router.push("/");
@@ -118,102 +115,7 @@ export default function OnboardingPage() {
         ))}
       </div>
 
-      {/* ── STEP 0: Account ─────────────────── */}
-      {step === 0 && (
-        <div className="flex flex-col gap-6">
-          <div>
-            <h1 className="text-3xl font-bold leading-tight" style={{ color: "var(--color-bento-text)" }}>
-              {isLogin ? "Welcome back." : "Build streaks.\nNot excuses."}
-            </h1>
-            <p className="text-sm mt-2" style={{ color: "var(--color-bento-muted)" }}>
-              {isLogin
-                ? "Sign in to continue your streak."
-                : "Set your goals, check in daily, watch consistency compound."}
-            </p>
-          </div>
-
-          <div className="flex flex-col gap-3">
-            {!isLogin && (
-              <input
-                type="text"
-                placeholder="Your name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl text-sm outline-none"
-                style={{
-                  background: "var(--color-bento-card)",
-                  border: "1px solid var(--color-bento-border)",
-                  color: "var(--color-bento-text)",
-                }}
-              />
-            )}
-            <input
-              type="email"
-              placeholder="Email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-3 rounded-xl text-sm outline-none"
-              style={{
-                background: "var(--color-bento-card)",
-                border: "1px solid var(--color-bento-border)",
-                color: "var(--color-bento-text)",
-              }}
-            />
-            <input
-              type="password"
-              placeholder="Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-3 rounded-xl text-sm outline-none"
-              style={{
-                background: "var(--color-bento-card)",
-                border: "1px solid var(--color-bento-border)",
-                color: "var(--color-bento-text)",
-              }}
-            />
-          </div>
-
-          {error && <p className="text-xs text-red-400">{error}</p>}
-
-          <button
-            onClick={handleAuth}
-            disabled={loading}
-            className="w-full py-4 rounded-xl text-sm font-semibold transition-opacity"
-            style={{ background: "var(--color--stryde-primary)", color: "#fff", opacity: loading ? 0.7 : 1 }}
-          >
-            {loading ? "Loading..." : isLogin ? "Sign in" : "Start for free →"}
-          </button>
-
-          <div className="flex items-center gap-3">
-            <div className="flex-1 h-px" style={{ background: "var(--color-bento-border)" }} />
-            <span className="text-xs" style={{ color: "var(--color-bento-muted)" }}>or</span>
-            <div className="flex-1 h-px" style={{ background: "var(--color-bento-border)" }} />
-          </div>
-
-          <button
-            onClick={handleGoogle}
-            className="w-full py-3.5 rounded-xl text-sm font-medium border"
-            style={{
-              border: "1px solid var(--color-bento-border)",
-              color: "var(--color-bento-text)",
-              background: "transparent",
-            }}
-          >
-            Continue with Google
-          </button>
-
-          <p className="text-center text-xs" style={{ color: "var(--color-bento-muted)" }}>
-            {isLogin ? "No account? " : "Already have an account? "}
-            <button
-              onClick={() => setIsLogin(!isLogin)}
-              className="underline"
-              style={{ color: "var(--color--stryde-primary)" }}
-            >
-              {isLogin ? "Sign up" : "Sign in"}
-            </button>
-          </p>
-        </div>
-      )}
+     
 
       {/* ── STEP 1: Goal category picker ─────── */}
       {step === 1 && (
@@ -249,7 +151,15 @@ export default function OnboardingPage() {
           </div>
 
           <button
-            onClick={() => setStep(2)}
+            onClick={() => {
+              if (!selectedCategory) {
+                setError("Select a category");
+                return;
+              }
+
+              setError("");
+              setStep(2);
+            }}
             className="w-full py-4 rounded-xl text-sm font-semibold mt-auto"
             style={{ background: "var(--color--stryde-primary)", color: "#fff" }}
           >

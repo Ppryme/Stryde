@@ -3,7 +3,7 @@
 // NEW HABIT PAGE — wraps the HabitCreateForm
 // Server component shell — client form inside
 // ─────────────────────────────────────────────
-import { createServerClient } from "@/lib/supabase-server";
+import { createClient } from "@/lib/supabase-server";
 import { redirect } from "next/navigation";
 import HabitCreateForm from "@/components/habits/HabitCreateForm";
 import Link from "next/link";
@@ -11,7 +11,7 @@ import Link from "next/link";
 export const metadata = { title: "New Habit" };
 
 export default async function NewHabitPage() {
-  const supabase = createServerClient();
+  const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/onboarding");
 

@@ -4,8 +4,7 @@
 // Includes: font, global styles, bottom nav, offline banner
 // ─────────────────────────────────────────────
 import "./globals.css";
-import BottomTabBar from "@/components/ui/BottomTabBar";
-import OfflineBanner from "@/components/ui/OfflineBanner";
+import AppShell from "@/components/ui/AppShell";
 
 export const metadata = {
   title: "Stryde",
@@ -32,16 +31,13 @@ export default function RootLayout({ children }) {
         // bg and text come from globals.css body rule (--color-bento-bg / --color-bento-text)
         className="min-h-screen antialiased"
       >
-        {/* Offline warning strip — only renders when navigator.onLine = false */}
-        <OfflineBanner />
 
-        {/* Main content — pb-16 gives space above the fixed bottom nav */}
-        <main className="pb-16">
+        {/*AppShell Wraps Children Content*/}
+        <AppShell>
           {children}
-        </main>
+        </AppShell>
 
-        {/* Fixed bottom navigation — visible on every page */}
-        <BottomTabBar />
+
       </body>
     </html>
   );
