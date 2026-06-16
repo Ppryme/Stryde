@@ -11,6 +11,8 @@ import StreakBadge from "@/components/streaks/StreakBadge";
 import HabitCard from "@/components/habits/HabitCard";
 import EmptyState from "@/components/ui/EmptyState";
 import GoalCard from "@/components/goals/GoalCard";
+import SignOutButton from "@/components/ui/Reusable/SignOutButton";
+
 
 // Helper — returns "Good morning" / "afternoon" / "evening"
 function getGreeting() {
@@ -29,6 +31,10 @@ const {
 } = await supabase.auth.getUser();
 
 if (!user) {
+  redirect("/sign-in");
+}
+
+if (!user.user_metadata?.onboarded) {
   redirect("/onboarding");
 }
 
@@ -71,9 +77,14 @@ if (!user) {
 
       {/* ── Greeting header ─────────────────── */}
       <div>
-        <p className="text-sm" style={{ color: "var(--color-bento-muted)" }}>
+        <div className="flex justify-between">
+          <p className="text-sm" style={{ color: "var(--color-bento-muted)" }}>
           {getGreeting()}
         </p>
+
+        <SignOutButton />
+      </div>
+        
         <h1 className="text-2xl font-bold mt-0.5" style={{ color: "var(--color-bento-text)" }}>
           {user.user_metadata?.name ?? "Let's get to work."}
         </h1>
