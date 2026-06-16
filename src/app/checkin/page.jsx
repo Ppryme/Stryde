@@ -18,7 +18,7 @@ function getGreeting() {
 }
 
 export default async function CheckInPage() {
-  const  supabase = await createClient();
+  const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/onboarding");
 

@@ -8,7 +8,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse } from "next/server";
 
 // Routes that DON'T need a logged-in user
-const PUBLIC_ROUTES = ["/onboarding", "/auth/callback"];
+const PUBLIC_ROUTES = ["/onboarding", "/sign-in", "/sign-up", "/auth/callback"];
 
 export async function middleware(request) {
   const { pathname } = request.nextUrl;

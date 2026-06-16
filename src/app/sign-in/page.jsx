@@ -10,6 +10,7 @@ export default function SignInPage() {
  
   const [email,    setEmail]    = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [loading,  setLoading]  = useState(false);
   const [error,    setError]    = useState("");
  
@@ -76,18 +77,29 @@ export default function SignInPage() {
             }}
           />
  
-          <input
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="w-full px-4 py-3 rounded-xl text-sm outline-none"
-            style={{
-              background: "var(--color-bento-card)",
-              border:     "1px solid var(--color-bento-border)",
-              color:      "var(--color-bento-text)",
-            }}
-          />
+          <div className="relative">
+            <input
+              type={showPassword ? "text" : "password"}
+              placeholder="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full px-4 py-3 pr-12 rounded-xl text-sm outline-none"
+              style={{
+                background: "var(--color-bento-card)",
+                border:     "1px solid var(--color-bento-border)",
+                color:      "var(--color-bento-text)",
+              }}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword((prev) => !prev)}
+              aria-label={showPassword ? "Hide password" : "Show password"}
+              className="absolute inset-y-0 right-0 flex items-center px-4 text-xs font-medium"
+              style={{ color: "var(--color-bento-muted)" }}
+            >
+              {showPassword ? "Hide" : "Show"}
+            </button>
+          </div>
         </div>
  
         {/* Error */}

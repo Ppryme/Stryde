@@ -4,7 +4,7 @@
 // Supabase sends the user back to this URL after Google login
 // We exchange the code for a session, then redirect to dashboard
 // ─────────────────────────────────────────────
-import { createServerClient } from "@/lib/supabase-server";
+import { createClient } from "@/lib/supabase-server";
 import { NextResponse } from "next/server";
 
 export async function GET(request) {
@@ -13,7 +13,7 @@ export async function GET(request) {
   const next  = searchParams.get("next") ?? "/";
 
   if (code) {
-    const supabase = createServerClient();
+    const supabase = await createClient();
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) {
       return NextResponse.redirect(`${origin}${next}`);
