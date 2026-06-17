@@ -9,6 +9,10 @@ import { useRouter } from "next/navigation";
 import { db } from "@/lib/db";
 import { getSupabase } from "@/lib/supabase";
 import { HABIT_CATEGORIES } from "@/lib/design-token";
+import Button from "@/components/ui/button";
+import FormError from "@/components/ui/FormError";
+import FormLabel from "@/components/ui/FormLabel";
+import Input from "@/components/ui/Input";
 
 const FREQUENCIES = ["daily", "weekly"];
 
@@ -75,45 +79,29 @@ export default function HabitCreateForm({ userId }) {
 
       {/* Habit name */}
       <div>
-        <label
-          className="block text-xs font-semibold mb-2 uppercase tracking-wider"
-          style={{ color: "var(--color-bento-muted)" }}
-        >
-          What's the habit?
-        </label>
-        <input
+        <FormLabel>What&apos;s the habit?</FormLabel>
+        <Input
           type="text"
           value={form.name}
           onChange={(e) => update("name", e.target.value)}
           placeholder="e.g. Morning run, Read 20 pages..."
-          className="w-full px-4 py-3 rounded-xl text-sm outline-none"
-          style={{
-            background: "var(--color-bento-card)",
-            border:     "1px solid var(--color-bento-border)",
-            color:      "var(--color-bento-text)",
-          }}
         />
-        {error && <p className="text-xs text-red-400 mt-1">{error}</p>}
+        <FormError message={error} />
       </div>
 
       {/* Category */}
       <div>
-        <label
-          className="block text-xs font-semibold mb-3 uppercase tracking-wider"
-          style={{ color: "var(--color-bento-muted)" }}
-        >
-          Category
-        </label>
+        <FormLabel className="mb-3">Category</FormLabel>
         <div className="grid grid-cols-3 gap-2">
           {Object.values(HABIT_CATEGORIES).map((cat) => (
             <button
               key={cat.id}
               onClick={() => update("category", cat.id)}
-              className="flex items-center gap-2 px-3 py-2.5 rounded-xl border text-sm capitalize transition-all"
+              className="flex items-center gap-2 px-3 py-2.5 rounded-xl border text-sm capitalize transition-all text-bento-muted bg-bento-card border-bento-border"
               style={{
-                background: form.category === cat.id ? cat.color + "22" : "var(--color-bento-card)",
-                border:     `1px solid ${form.category === cat.id ? cat.color : "var(--color-bento-border)"}`,
-                color:      form.category === cat.id ? cat.color : "var(--color-bento-muted)",
+                ...(form.category === cat.id
+                  ? { background: cat.color + "22", borderColor: cat.color, color: cat.color }
+                  : {}),
               }}
             >
               <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: cat.color }} />
@@ -125,23 +113,17 @@ export default function HabitCreateForm({ userId }) {
 
       {/* Frequency */}
       <div>
-        <label
-          className="block text-xs font-semibold mb-3 uppercase tracking-wider"
-          style={{ color: "var(--color-bento-muted)" }}
-        >
-          How often?
-        </label>
+        <FormLabel className="mb-3">How often?</FormLabel>
         <div className="flex gap-3">
           {FREQUENCIES.map((f) => (
             <button
               key={f}
               onClick={() => update("frequency", f)}
-              className="flex-1 py-3 rounded-xl text-sm font-medium capitalize border transition-all"
-              style={{
-                background: form.frequency === f ? "var(--color--stryde-primary-light)" : "transparent",
-                border:     `1px solid ${form.frequency === f ? "var(--color--stryde-primary)" : "var(--color-bento-border)"}`,
-                color:      form.frequency === f ? "var(--color--stryde-primary-dark)" : "var(--color-bento-muted)",
-              }}
+              className={`flex-1 py-3 rounded-xl text-sm font-medium capitalize border transition-all ${
+                form.frequency === f
+                  ? "bg-stryde-primary-light border-stryde-primary text-stryde-primary-dark"
+                  : "bg-transparent border-bento-border text-bento-muted"
+              }`}
             >
               {f}
             </button>
@@ -151,41 +133,26 @@ export default function HabitCreateForm({ userId }) {
 
       {/* Reminder time */}
       <div>
-        <label
-          className="block text-xs font-semibold mb-1 uppercase tracking-wider"
-          style={{ color: "var(--color-bento-muted)" }}
-        >
-          Reminder time
-        </label>
-        <p className="text-xs mb-2" style={{ color: "var(--color-bento-muted)" }}>
-          We'll nudge you if you haven't checked in yet.
+        <FormLabel className="mb-1">Reminder time</FormLabel>
+        <p className="text-xs mb-2 text-bento-muted">
+          We&apos;ll nudge you if you haven&apos;t checked in yet.
         </p>
-        <input
+        <Input
           type="time"
           value={form.reminderTime}
           onChange={(e) => update("reminderTime", e.target.value)}
-          className="px-4 py-3 rounded-xl text-sm outline-none"
-          style={{
-            background: "var(--color-bento-card)",
-            border:     "1px solid var(--color-bento-border)",
-            color:      "var(--color-bento-text)",
-          }}
+          className="w-auto"
         />
       </div>
 
       {/* Save */}
-      <button
+      <Button
         onClick={handleSave}
         disabled={saving}
-        className="w-full py-4 rounded-xl text-sm font-semibold transition-opacity"
-        style={{
-          background: "var(--color--stryde-primary)",
-          color:      "#fff",
-          opacity:    saving ? 0.7 : 1,
-        }}
+        className="w-full py-4 rounded-xl text-sm"
       >
         {saving ? "Saving..." : "Save habit"}
-      </button>
+      </Button>
 
     </div>
   );

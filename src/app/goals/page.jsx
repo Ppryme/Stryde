@@ -32,13 +32,12 @@ export default async function GoalsPage() {
 
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold" style={{ color: "var(--color-bento-text)" }}>
+        <h1 className="text-2xl font-bold text-bento-text">
           Goals
         </h1>
         <Link
           href="/goals/new"
-          className="flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium"
-          style={{ background: "var(--color--stryde-primary)", color: "#fff" }}
+          className="flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium bg-stryde-primary text-white hover:bg-stryde-primary-dark transition-colors"
         >
           <i className="ti ti-plus text-sm" aria-hidden="true" />
           Add
@@ -59,7 +58,7 @@ export default async function GoalsPage() {
           {/* Active goals */}
           {activeGoals.length > 0 && (
             <section>
-              <h2 className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: "var(--color-bento-muted)" }}>
+              <h2 className="text-xs font-semibold uppercase tracking-wider mb-3 text-bento-muted">
                 Active
               </h2>
               <div className="flex flex-col gap-2">
@@ -73,7 +72,7 @@ export default async function GoalsPage() {
           {/* Other goals (completed/paused/abandoned) */}
           {otherGoals.length > 0 && (
             <section>
-              <h2 className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: "var(--color-bento-muted)" }}>
+              <h2 className="text-xs font-semibold uppercase tracking-wider mb-3 text-bento-muted">
                 Other
               </h2>
               <div className="flex flex-col gap-2">

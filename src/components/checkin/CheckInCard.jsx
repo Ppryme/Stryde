@@ -1,10 +1,5 @@
-// src/components/checkin/CheckInCard.jsx
-// ─────────────────────────────────────────────
-// CHECK-IN CARD — large tap target for daily check-in
-// Tapping completes / uncompletes the habit
-// Writes to IndexedDB first, then syncs to Supabase
-// ─────────────────────────────────────────────
 "use client";
+
 import { useState } from "react";
 import { db } from "@/lib/db";
 import { getSupabase } from "@/lib/supabase";
@@ -16,12 +11,10 @@ export default function CheckInCard({ habit, userId, today, isChecked, onToggle,
   async function handleTap() {
     const newValue = !isChecked;
 
-    // 1. Instant visual feedback
     setPressing(true);
-    onToggle(habit.id, newValue); // update parent state immediately
+    onToggle(habit.id, newValue);
     setTimeout(() => setPressing(false), 150);
 
-    // 2. Write to IndexedDB
     const existing = await db.checkIns
       .where({ habitId: habit.id, userId, date: today })
       .first();
@@ -30,17 +23,18 @@ export default function CheckInCard({ habit, userId, today, isChecked, onToggle,
       await db.checkIns.update(existing.id, { completed: newValue, synced: false });
     } else {
       await db.checkIns.add({
-        habitId: habit.id, userId, date: today,
-        completed: newValue, synced: false,
+        habitId: habit.id,
+        userId,
+        date: today,
+        completed: newValue,
+        synced: false,
         createdAt: new Date().toISOString(),
       });
     }
 
-    // 3. Recalculate streak + check for milestones
     const newStreak = await recalculateStreak(habit.id, userId);
     if (newValue && newStreak) onMilestone?.(newStreak);
 
-    // 4. Sync to Supabase if online
     if (navigator.onLine) {
       const supabase = getSupabase();
       await supabase.from("check_ins").upsert(
@@ -53,47 +47,37 @@ export default function CheckInCard({ habit, userId, today, isChecked, onToggle,
   return (
     <button
       onClick={handleTap}
+      aria-label={isChecked ? `Mark ${habit.name} incomplete` : `Mark ${habit.name} complete`}
       aria-pressed={isChecked}
-      className="w-full flex items-center gap-4 px-5 py-4 rounded-2xl border text-left transition-all"
-      style={{
-        minHeight:  72,
-        background: isChecked ? "var(--color--stryde-success-light)" : "var(--color-bento-card)",
-        border:     `1px solid ${isChecked ? "var(--color--stryde-success)" : "var(--color-bento-border)"}`,
-        transform:  pressing ? "scale(0.97)" : "scale(1)",
-        transition: "transform 0.1s ease, background 0.2s ease",
-      }}
+      data-checked={isChecked}
+      data-pressing={pressing}
+      className="w-full min-h-[72px] flex items-center gap-4 px-5 py-4 rounded-2xl border text-left transition-all bg-bento-card border-bento-border data-checked:bg-stryde-success-light data-checked:border-stryde-success data-pressing:scale-[0.97]"
     >
-      {/* Circle checkbox */}
       <div
-        className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-all"
-        style={{
-          background: isChecked ? "var(--color--stryde-success)" : "transparent",
-          border:     isChecked ? "none" : "1.5px solid var(--color-bento-border)",
-          color:      isChecked ? "#fff" : "var(--color-bento-muted)",
-        }}
+        className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-all ${
+          isChecked
+            ? "bg-stryde-success text-white"
+            : "bg-transparent border border-bento-border text-bento-muted"
+        }`}
       >
         {isChecked && <i className="ti ti-check text-base" aria-hidden="true" />}
       </div>
 
-      {/* Habit name */}
       <div className="flex-1 min-w-0">
         <p
-          className="text-sm font-semibold"
-          style={{
-            color:          isChecked ? "var(--color--stryde-success-dark)" : "var(--color-bento-text)",
-            textDecoration: isChecked ? "line-through" : "none",
-          }}
+          className={`text-sm font-semibold ${
+            isChecked ? "text-stryde-success-dark line-through" : "text-bento-text"
+          }`}
         >
           {habit.name}
         </p>
-        <p className="text-xs mt-0.5 capitalize" style={{ color: "var(--color-bento-muted)" }}>
+        <p className="text-xs mt-0.5 capitalize text-bento-muted">
           {habit.category}
         </p>
       </div>
 
-      {/* Tap hint on unchecked */}
       {!isChecked && (
-        <span className="text-xs flex-shrink-0" style={{ color: "var(--color-bento-muted)" }}>
+        <span className="text-xs flex-shrink-0 text-bento-muted">
           Tap to complete
         </span>
       )}

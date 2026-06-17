@@ -5,16 +5,16 @@ export default function Badge({
 }) {
   const variants = {
     success:
-      "bg-[var(--color--stryde-success-light)] text-[var(--color--stryde-success-dark)]",
+      "bg-stryde-success-light text-stryde-success-dark",
 
     warning:
-      "bg-[var(--color--stryde-fire-light)] text-[#633806]",
+      "bg-stryde-fire-light text-stryde-fire-dark",
 
     danger:
-      "bg-[var(--color--stryde-danger-light)] text-[#791F1F]",
+      "bg-stryde-danger-light text-stryde-danger-dark",
 
     info:
-      "bg-[var(--color--stryde-primary-light)] text-[var(--color--stryde-primary-dark)]",
+      "bg-stryde-primary-light text-stryde-primary-dark",
   };
 
   return (

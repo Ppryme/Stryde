@@ -30,10 +30,7 @@ export default function StreakBadge({ habitId, userId }) {
   if (streak === null || streak === 0) return null;
 
   return (
-    <span
-      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium flex-shrink-0"
-      style={{ background: "var(--color--stryde-fire-light)", color: "#633806" }}
-    >
+    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium flex-shrink-0 bg-stryde-fire-light text-stryde-fire-dark">
       <i className="ti ti-flame text-sm" aria-hidden="true" />
       {streak}
     </span>

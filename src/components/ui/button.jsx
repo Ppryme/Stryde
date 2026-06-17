@@ -8,19 +8,19 @@ export default function Button({
 }) {
   const variants = {
     primary:
-      "bg-[var(--stryde-primary)] text-white hover:bg-[var(--stryde-primary-dark)]",
+      "bg-stryde-primary text-white hover:bg-stryde-primary-dark",
 
     success:
-      "bg-[var(--stryde-success)] text-white hover:opacity-90",
+      "bg-stryde-success text-white hover:opacity-90",
 
     outline:
-      "border border-gray-300 bg-white text-gray-800 hover:bg-gray-50",
+      "border border-bento-border bg-bento-card text-bento-text hover:border-stryde-primary",
 
     ghost:
-      "bg-transparent text-gray-700 hover:bg-gray-100",
+      "bg-transparent text-bento-muted hover:bg-bento-card hover:text-bento-text",
 
     danger:
-      "bg-[var(--stryde-danger)] text-white hover:opacity-90",
+      "bg-stryde-danger text-white hover:opacity-90",
   };
 
   return (

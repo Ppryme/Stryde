@@ -41,7 +41,7 @@ export default async function AnalyticsPage() {
   return (
     <div className="px-4 pt-10 pb-6 flex flex-col gap-6">
 
-      <h1 className="text-2xl font-bold" style={{ color: "var(--color-bento-text)" }}>
+      <h1 className="text-2xl font-bold text-bento-text">
         Your progress
       </h1>
 
@@ -54,16 +54,12 @@ export default async function AnalyticsPage() {
         ].map((stat) => (
           <div
             key={stat.label}
-            className="flex flex-col items-center justify-center py-4 rounded-2xl"
-            style={{ background: "var(--color-bento-card)", border: "1px solid var(--color-bento-border)" }}
+            className="flex flex-col items-center justify-center py-4 rounded-2xl bg-bento-card border border-bento-border"
           >
-            <span
-              className="text-2xl font-bold"
-              style={{ color: "var(--color--stryde-primary)" }}
-            >
+            <span className="text-2xl font-bold text-stryde-primary">
               {stat.value}
             </span>
-            <span className="text-[11px] mt-0.5" style={{ color: "var(--color-bento-muted)" }}>
+            <span className="text-[11px] mt-0.5 text-bento-muted">
               {stat.label}
             </span>
           </div>
@@ -72,7 +68,7 @@ export default async function AnalyticsPage() {
 
       {/* Heatmap */}
       <section>
-        <h2 className="text-sm font-semibold mb-3" style={{ color: "var(--color-bento-text)" }}>
+        <h2 className="text-sm font-semibold mb-3 text-bento-text">
           Activity this year
         </h2>
         <HeatmapCalendar checkIns={checkIns ?? []} />
@@ -80,7 +76,7 @@ export default async function AnalyticsPage() {
 
       {/* Trend chart */}
       <section>
-        <h2 className="text-sm font-semibold mb-3" style={{ color: "var(--color-bento-text)" }}>
+        <h2 className="text-sm font-semibold mb-3 text-bento-text">
           Weekly completion rate
         </h2>
         <TrendChart checkIns={checkIns ?? []} />

@@ -21,12 +21,11 @@ export default async function NewHabitPage() {
       <div className="flex items-center gap-3 mb-8">
         <Link
           href="/habits"
-          className="flex items-center justify-center w-9 h-9 rounded-full"
-          style={{ background: "var(--color-bento-card)", border: "1px solid var(--color-bento-border)" }}
+          className="flex items-center justify-center w-9 h-9 rounded-full bg-bento-card border border-bento-border"
         >
-          <i className="ti ti-arrow-left" style={{ color: "var(--color-bento-text)" }} aria-hidden="true" />
+          <i className="ti ti-arrow-left text-bento-text" aria-hidden="true" />
         </Link>
-        <h1 className="text-xl font-bold" style={{ color: "var(--color-bento-text)" }}>
+        <h1 className="text-xl font-bold text-bento-text">
           New habit
         </h1>
       </div>

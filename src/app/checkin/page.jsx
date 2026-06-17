@@ -51,28 +51,27 @@ export default async function CheckInPage() {
     <div className="px-4 pt-10 pb-6">
 
       {/* Header */}
-      <p className="text-sm mb-0.5" style={{ color: "var(--color-bento-muted)" }}>
+      <p className="text-sm mb-0.5 text-bento-muted">
         {new Date().toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" })}
       </p>
-      <h1 className="text-2xl font-bold mb-1" style={{ color: "var(--color-bento-text)" }}>
+      <h1 className="text-2xl font-bold mb-1 text-bento-text">
         {getGreeting()}
       </h1>
-      <p className="text-sm mb-6" style={{ color: "var(--color-bento-muted)" }}>
+      <p className="text-sm mb-6 text-bento-muted">
         Your streak is on the line.
       </p>
 
       {/* Progress bar */}
       <div className="mb-6">
-        <div className="flex justify-between text-xs mb-1.5" style={{ color: "var(--color-bento-muted)" }}>
+        <div className="flex justify-between text-xs mb-1.5 text-bento-muted">
           <span>{completedCount} of {totalHabits} done</span>
           <span>{totalHabits > 0 ? Math.round((completedCount / totalHabits) * 100) : 0}%</span>
         </div>
-        <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "var(--color-bento-border)" }}>
+        <div className="h-1.5 rounded-full overflow-hidden bg-bento-border">
           <div
-            className="h-full rounded-full transition-all duration-500"
+            className="h-full rounded-full transition-all duration-500 bg-stryde-primary"
             style={{
-              width:      `${totalHabits > 0 ? (completedCount / totalHabits) * 100 : 0}%`,
-              background: "var(--color--stryde-primary)",
+              width: `${totalHabits > 0 ? (completedCount / totalHabits) * 100 : 0}%`,
             }}
           />
         </div>

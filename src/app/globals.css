@@ -1,48 +1,46 @@
 @import "tailwindcss";
 
+@theme {
+  --color-stryde-primary: #534AB7;
+  --color-stryde-primary-light: #EEEDFE;
+  --color-stryde-primary-mid: #7F77DD;
+  --color-stryde-primary-dark: #3C3489;
+
+  --color-stryde-success: #1D9E75;
+  --color-stryde-success-light: #E1F5EE;
+  --color-stryde-success-dark: #085041;
+
+  --color-stryde-fire: #BA7517;
+  --color-stryde-fire-light: #FAEEDA;
+  --color-stryde-fire-dark: #633806;
+
+  --color-stryde-danger: #E24B4A;
+  --color-stryde-danger-light: #FCEBEB;
+  --color-stryde-danger-dark: #791F1F;
+
+  --color-bento-bg: #0F0E17;
+  --color-bento-card: #1A1926;
+  --color-bento-border: #2D2B3D;
+  --color-bento-text: #E4E3E0;
+  --color-bento-muted: #8E9299;
+  --color-bento-purple: #AFA9EC;
+  --color-bento-orange: #D85A30;
+
+  --font-sans: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  --font-mono: var(--font-geist-mono), "Courier New", monospace;
+}
+
 :root {
-  /* ==========================
-     COLORS
-  ========================== */
-
- --color--stryde-primary: #534AB7;
-  --color--stryde-primary-light: #EEEDFE;
-  --color--stryde-primary-mid: #7F77DD;
-  --color--stryde-primary-dark: #3C3489;
-
-  --color--stryde-success: #1D9E75;
-  --color--stryde-success-light: #E1F5EE;
-  --color--stryde-success-dark: #085041;
-
-  --color--stryde-fire: #BA7517;
-  --color--stryde-fire-light: #FAEEDA;
-
-  --color--stryde-danger: #E24B4A;
-  --color--stryde-danger-light: #FCEBEB;
-
   /* ==========================
      CATEGORY COLORS
   ========================== */
 
- --colors--habit-learning: #534AB7;
-  --colors--habit-health: #1D9E75;
-  --colors--habit-fitness: #D85A30;
-  --colors--habit-focus: #BA7517;
-  --colors--habit-wellness: #D4537E;
-  --colors--habit-other: #888780;
-
-
-
-  /* ==========================
-   BENTO THEME
-========================== */
-
---color-bento-bg: #0F0E17;
---color-bento-card: #1A1926;
---color-bento-border: #2D2B3D;
-
---color-bento-text: #E4E3E0;
---color-bento-muted: #8E9299;
+  --colors-habit-learning: #534AB7;
+  --colors-habit-health: #1D9E75;
+  --colors-habit-fitness: #D85A30;
+  --colors-habit-focus: #BA7517;
+  --colors-habit-wellness: #D4537E;
+  --colors-habit-other: #888780;
 
   /* ==========================
      RADIUS
@@ -104,7 +102,53 @@ button {
 }
 
 :focus-visible {
-  outline: 2px solid var(--stryde-primary);
+  outline: 2px solid var(--color-stryde-primary);
   outline-offset: 2px;
 }
 
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.2s ease-out both;
+}
+
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-bento-border) transparent;
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: var(--color-bento-border);
+  border-radius: var(--radius-full);
+}
+
+.scrollbar-none {
+  scrollbar-width: none;
+}
+
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+@layer components {
+  .stryde-card {
+    border: 1px solid var(--color-bento-border);
+    border-radius: var(--radius-lg);
+    background: var(--color-bento-card);
+    color: var(--color-bento-text);
+  }
+}

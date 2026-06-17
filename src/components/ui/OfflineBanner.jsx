@@ -12,16 +12,9 @@ export default function OfflineBanner() {
   if (isOnline) return null;
 
   return (
-    <div
-      className="flex items-center gap-2 px-4 py-2 text-xs font-medium"
-      style={{
-        background: "var(--color--stryde-fire-light)",
-        color: "#633806",
-        borderBottom: "1px solid var(--color--stryde-fire)",
-      }}
-    >
+    <div className="flex items-center gap-2 px-4 py-2 text-xs font-medium bg-stryde-fire-light text-stryde-fire-dark border-b border-stryde-fire">
       <i className="ti ti-wifi-off text-base" aria-hidden="true" />
-      You're offline. Check-ins are saved and will sync when you're back.
+      You&apos;re offline. Check-ins are saved and will sync when you&apos;re back.
     </div>
   );
 }

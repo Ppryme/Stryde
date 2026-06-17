@@ -8,6 +8,11 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { getSupabase } from "@/lib/supabase";
+import Button from "@/components/ui/button";
+import FormError from "@/components/ui/FormError";
+import FormLabel from "@/components/ui/FormLabel";
+import Input from "@/components/ui/Input";
+import Textarea from "@/components/ui/Textarea";
 
 export default function GoalCreateForm({ userId }) {
   const router = useRouter();
@@ -53,83 +58,50 @@ export default function GoalCreateForm({ userId }) {
 
       {/* Title */}
       <div>
-        <label
-          className="block text-xs font-semibold mb-2 uppercase tracking-wider"
-          style={{ color: "var(--color-bento-muted)" }}
-        >
-          Goal title
-        </label>
-        <input
+        <FormLabel>Goal title</FormLabel>
+        <Input
           type="text"
           value={form.title}
           onChange={(e) => update("title", e.target.value)}
           placeholder="e.g. Learn Spanish, Run a 10K..."
-          className="w-full px-4 py-3 rounded-xl text-sm outline-none"
-          style={{
-            background: "var(--color-bento-card)",
-            border:     "1px solid var(--color-bento-border)",
-            color:      "var(--color-bento-text)",
-          }}
         />
-        {error && <p className="text-xs text-red-400 mt-1">{error}</p>}
+        <FormError message={error} />
       </div>
 
       {/* Description */}
       <div>
-        <label
-          className="block text-xs font-semibold mb-2 uppercase tracking-wider"
-          style={{ color: "var(--color-bento-muted)" }}
-        >
+        <FormLabel>
           Description <span className="opacity-60">(optional)</span>
-        </label>
-        <textarea
+        </FormLabel>
+        <Textarea
           value={form.description}
           onChange={(e) => update("description", e.target.value)}
           placeholder="What does success look like?"
           rows={3}
-          className="w-full px-4 py-3 rounded-xl text-sm outline-none resize-none"
-          style={{
-            background: "var(--color-bento-card)",
-            border:     "1px solid var(--color-bento-border)",
-            color:      "var(--color-bento-text)",
-          }}
         />
       </div>
 
       {/* Target date */}
       <div>
-        <label
-          className="block text-xs font-semibold mb-2 uppercase tracking-wider"
-          style={{ color: "var(--color-bento-muted)" }}
-        >
+        <FormLabel>
           Target date <span className="opacity-60">(optional)</span>
-        </label>
-        <input
+        </FormLabel>
+        <Input
           type="date"
           value={form.targetDate}
           onChange={(e) => update("targetDate", e.target.value)}
-          className="px-4 py-3 rounded-xl text-sm outline-none"
-          style={{
-            background: "var(--color-bento-card)",
-            border:     "1px solid var(--color-bento-border)",
-            color:      "var(--color-bento-text)",
-          }}
+          className="w-auto"
         />
       </div>
 
       {/* Save */}
-      <button
+      <Button
         onClick={handleSave}
         disabled={saving}
-        className="w-full py-4 rounded-xl text-sm font-semibold transition-opacity"
-        style={{
-          background: "var(--color--stryde-primary)",
-          color:      "#fff",
-          opacity:    saving ? 0.7 : 1,
-        }}
+        className="w-full py-4 rounded-xl text-sm"
       >
         {saving ? "Saving..." : "Save goal"}
-      </button>
+      </Button>
 
     </div>
   );

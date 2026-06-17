@@ -78,28 +78,25 @@ if (!user.user_metadata?.onboarded) {
       {/* ── Greeting header ─────────────────── */}
       <div>
         <div className="flex justify-between">
-          <p className="text-sm" style={{ color: "var(--color-bento-muted)" }}>
+          <p className="text-sm text-bento-muted">
           {getGreeting()}
         </p>
 
         <SignOutButton />
       </div>
         
-        <h1 className="text-2xl font-bold mt-0.5" style={{ color: "var(--color-bento-text)" }}>
+        <h1 className="text-2xl font-bold mt-0.5 text-bento-text">
           {user.user_metadata?.name ?? "Let's get to work."}
         </h1>
       </div>
 
       {/* ── Progress ring + streak row ───────── */}
-      <div
-        className="flex items-center justify-between rounded-2xl p-5"
-        style={{ background: "var(--color-bento-card)", border: "1px solid var(--color-bento-border)" }}
-      >
+      <div className="flex items-center justify-between rounded-2xl p-5 bg-bento-card border border-bento-border">
         <ProgressRing total={totalHabits} completed={completedCount} size={110} />
         <div className="flex flex-col items-end gap-3">
           <div className="text-right">
-            <p className="text-xs" style={{ color: "var(--color-bento-muted)" }}>Today</p>
-            <p className="text-lg font-bold" style={{ color: "var(--color-bento-text)" }}>
+            <p className="text-xs text-bento-muted">Today</p>
+            <p className="text-lg font-bold text-bento-text">
               {completedCount}/{totalHabits} done
             </p>
           </div>
@@ -110,10 +107,10 @@ if (!user.user_metadata?.onboarded) {
       {/* ── Today's habits (preview, max 4) ─── */}
       <section>
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-base font-semibold" style={{ color: "var(--color-bento-text)" }}>
+          <h2 className="text-base font-semibold text-bento-text">
             Today&apos;s habits
           </h2>
-          <a href="/habits" className="text-xs" style={{ color: "var(--color-stryde-primary)" }}>
+          <a href="/habits" className="text-xs text-stryde-primary">
             See all →
           </a>
         </div>
@@ -143,10 +140,10 @@ if (!user.user_metadata?.onboarded) {
       {goals && goals.length > 0 && (
         <section>
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-base font-semibold" style={{ color: "var(--color-bento-text)" }}>
+          <h2 className="text-base font-semibold text-bento-text">
               Active goals
             </h2>
-            <a href="/goals" className="text-xs" style={{ color: "var(--color-stryde-primary)" }}>
+            <a href="/goals" className="text-xs text-stryde-primary">
               See all →
             </a>
           </div>
