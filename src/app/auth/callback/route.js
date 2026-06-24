@@ -9,17 +9,38 @@ import { NextResponse } from "next/server";
 
 export async function GET(request) {
   const { searchParams, origin } = new URL(request.url);
-  const code  = searchParams.get("code");
-  const next  = searchParams.get("next") ?? "/";
+  const code = searchParams.get("code");
 
   if (code) {
     const supabase = await createClient();
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
+
+    const { error } =
+      await supabase.auth.exchangeCodeForSession(code);
+
+       console.log("EXCHANGE ERROR:", error);
+
     if (!error) {
-      return NextResponse.redirect(`${origin}${next}`);
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+        console.log("CALLBACK USER:", user);
+
+      if (user?.user_metadata?.onboarded) {
+        console.log(
+          "REDIRECT TARGET:",
+          user?.user_metadata?.onboarded ? "/" : "/onboarding"
+        );
+        return NextResponse.redirect(`${origin}/`);
+        
+      }
+
+      return NextResponse.redirect(`${origin}/onboarding`);
     }
   }
 
-  // If something went wrong, go back to onboarding
-  return NextResponse.redirect(`${origin}/onboarding?error=auth_failed`);
+  return NextResponse.redirect(
+    `${origin}/sign-in?error=auth_failed`
+  );
 }
+

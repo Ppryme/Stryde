@@ -71,7 +71,7 @@ export default function GoalCreateForm({ userId }) {
       {/* Description */}
       <div>
         <FormLabel>
-          Description <span className="opacity-60">(optional)</span>
+          Description <span className="">(optional)</span>
         </FormLabel>
         <Textarea
           value={form.description}

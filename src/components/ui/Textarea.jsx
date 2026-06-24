@@ -16,6 +16,8 @@ export default function Textarea({ className = "", ...props }) {
         resize-none
         transition-colors
         focus:border-stryde-primary
+        focus:border-none
+        focus:outline-none  
         ${className}
       `}
       {...props}

@@ -12,7 +12,7 @@ import HabitCard from "@/components/habits/HabitCard";
 import EmptyState from "@/components/ui/EmptyState";
 import GoalCard from "@/components/goals/GoalCard";
 import SignOutButton from "@/components/ui/Reusable/SignOutButton";
-
+import "./globals.css"
 
 // Helper — returns "Good morning" / "afternoon" / "evening"
 function getGreeting() {
@@ -143,7 +143,7 @@ if (!user.user_metadata?.onboarded) {
           <h2 className="text-base font-semibold text-bento-text">
               Active goals
             </h2>
-            <a href="/goals" className="text-xs text-stryde-primary">
+            <a href="/goals" className="text-xs text-stryde-primary text">
               See all →
             </a>
           </div>

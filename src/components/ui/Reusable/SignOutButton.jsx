@@ -18,7 +18,7 @@ export default function SignOutButton() {
   return (
     <button
       onClick={handleSignOut}
-      className="text-sm font-semibold rounded px-6 py-4 bg-[#1A1926]"
+      className="text-sm font-semibold rounded px-6 py-4 bg-bento-bgSecondary"
     >
       Sign Out
     </button>

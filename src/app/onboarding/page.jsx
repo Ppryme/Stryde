@@ -69,8 +69,12 @@ export default function OnboardingPage() {
     });
 
     const { error: updateError } = await supabase.auth.updateUser({
-      data: { onboarded: true },
-    });
+      data: { onboarded: true,
+        name: user.user_metadata?.name ??
+        user.user_metadata?.full_name,
+  },
+       });
+    
 
     if (updateError) {
       setError(updateError.message);

@@ -20,6 +20,7 @@
 
   --color-bento-bg: #0F0E17;
   --color-bento-card: #1A1926;
+  --color-bento-bgSecondary: #1A1926;
   --color-bento-border: #2D2B3D;
   --color-bento-text: #E4E3E0;
   --color-bento-muted: #8E9299;
@@ -101,8 +102,9 @@ button {
   cursor: pointer;
 }
 
-:focus-visible {
-  outline: 2px solid var(--color-stryde-primary);
+button:focus-visible,
+a:focus-visible {
+  
   outline-offset: 2px;
 }
 
