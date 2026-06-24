@@ -105,7 +105,7 @@ export default function OnboardingClient() {
             onClick={() => setStep(1)}
             className="w-full max-w-md py-4 text-sm sm:text-base mt-auto"
           >
-            &gt;&gt; Get started
+             Get started
           </Button>
         </section>
       )}
