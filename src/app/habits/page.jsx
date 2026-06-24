@@ -14,7 +14,7 @@ export const metadata = { title: "Habits" };
 export default async function HabitsPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/onboarding");
+  if (!user) redirect("/sign-in");
 
   const today = new Date().toISOString().split("T")[0];
 

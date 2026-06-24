@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 import BottomTabBar from "@/components/ui/BottomTabBar";
 import OfflineBanner from "@/components/ui/OfflineBanner";
 
-const HIDE_BOTTOM_BAR_ROUTES = ["/sign-in", "/sign-up"];
+const HIDE_BOTTOM_BAR_ROUTES = ["/onboarding", "/sign-in", "/sign-up"];
 
 export default function AppShell({ children }) {
   const pathname = usePathname();

@@ -14,7 +14,7 @@ export const metadata = { title: "Analytics" };
 export default async function AnalyticsPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/onboarding");
+  if (!user) redirect("/sign-in");
 
   // Last 365 days of check-ins
   const oneYearAgo = getOneYearAgoDate();

@@ -2,13 +2,13 @@
 // ─────────────────────────────────────────────
 // MIDDLEWARE — route protection
 // Runs on every request BEFORE the page loads
-// Redirects unauthenticated users to /onboarding
+// Redirects unauthenticated users to /sign-in
 // ─────────────────────────────────────────────
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse } from "next/server";
 
 // Routes that DON'T need a logged-in user
-const PUBLIC_ROUTES = ["/onboarding", "/sign-in", "/sign-up", "/auth/callback"];
+const PUBLIC_ROUTES = ["/sign-in", "/sign-up", "/auth/callback"];
 
 export async function middleware(request) {
   const { pathname } = request.nextUrl;
@@ -37,7 +37,7 @@ export async function middleware(request) {
 
   // Not logged in → send to onboarding/login
   if (!user) {
-    return NextResponse.redirect(new URL("/onboarding", request.url));
+    return NextResponse.redirect(new URL("/sign-in", request.url));
   }
 
   return response;

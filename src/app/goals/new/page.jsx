@@ -14,7 +14,7 @@ export const metadata = { title: "New Goal" };
 export default async function NewGoalPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/onboarding");
+  if (!user) redirect("/sign-in");
 
   // Fetch user's habits so they can optionally link this goal to one
   const { data: habits } = await supabase

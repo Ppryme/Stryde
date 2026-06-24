@@ -13,7 +13,7 @@ export const metadata = { title: "New Habit" };
 export default async function NewHabitPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/onboarding");
+  if (!user) redirect("/sign-in");
 
   return (
     <div className="px-4 pt-10 pb-6">

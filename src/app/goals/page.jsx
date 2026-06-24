@@ -15,7 +15,7 @@ export const metadata = { title: "Goals" };
 export default async function GoalsPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/onboarding");
+  if (!user) redirect("/sign-in");
 
   const { data: goals } = await supabase
     .from("goals")
