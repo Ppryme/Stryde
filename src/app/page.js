@@ -1,7 +1,10 @@
+
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import DashboardHome from "@/components/dashboard/DashboardHome";
 import { createClient } from "@/lib/supabase-server";
+import LandingPage from "./Intro/page";
+
 
 const LANDING_SEEN_COOKIE = "stryde_landing_seen";
 
@@ -32,35 +35,7 @@ async function getStarted() {
   redirect("/");
 }
 
-function LandingPage() {
-  return (
-    <main className="min-h-screen bg-bento-bg text-bento-text flex items-center justify-center px-6">
-      <section className="w-full max-w-sm flex flex-col items-center text-center gap-8">
-        <img
-          src="/stryde-logo%20.png"
-          alt="Stryde logo"
-          className="h-20 w-20 rounded-2xl object-contain"
-        />
 
-        <div className="flex flex-col gap-3">
-          <h1 className="text-3xl font-bold">Welcome to Stryde</h1>
-          <p className="text-base font-medium text-bento-muted">
-            Build streaks. Not excuses.
-          </p>
-        </div>
-
-        <form action={getStarted} className="w-full">
-          <button
-            type="submit"
-            className="w-full rounded-xl bg-stryde-primary px-5 py-4 text-sm font-semibold text-white"
-          >
-            Get Started
-          </button>
-        </form>
-      </section>
-    </main>
-  );
-}
 
 export default async function HomePage() {
   const supabase = await createClient();
