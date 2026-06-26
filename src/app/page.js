@@ -1,160 +1,87 @@
-// src/app/page.jsx
-// ─────────────────────────────────────────────
-// DASHBOARD — home screen (returning user)
-// Shows: greeting, progress ring, today's habits preview, streak summary
-// This is a SERVER component — data fetching happens here
-// ─────────────────────────────────────────────
-import { createClient } from "@/lib/supabase-server";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import ProgressRing from "@/components/ui/ProgressRing";
-import StreakBadge from "@/components/streaks/StreakBadge";
-import HabitCard from "@/components/habits/HabitCard";
-import EmptyState from "@/components/ui/EmptyState";
-import GoalCard from "@/components/goals/GoalCard";
-import SignOutButton from "@/components/ui/Reusable/SignOutButton";
-import "./globals.css"
+import DashboardHome from "@/components/dashboard/DashboardHome";
+import { createClient } from "@/lib/supabase-server";
 
-// Helper — returns "Good morning" / "afternoon" / "evening"
-function getGreeting() {
-  const hour = new Date().getHours();
-  if (hour < 12) return "Good morning";
-  if (hour < 17) return "Good afternoon";
-  return "Good evening";
-}
+const LANDING_SEEN_COOKIE = "stryde_landing_seen";
 
-export default async function DashboardPage() {
+async function getStarted() {
+  "use server";
+
+  const cookieStore = await cookies();
+  cookieStore.set(LANDING_SEEN_COOKIE, "true", {
+    httpOnly: true,
+    sameSite: "lax",
+    path: "/",
+    maxAge: 60 * 60 * 24 * 365,
+  });
+
   const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  // ── Auth check ──────────────────────────────
-const {
-  data: { user },
-} = await supabase.auth.getUser();
+  if (!user) {
+    redirect("/sign-in");
+  }
 
-if (!user) {
-  redirect("/sign-in");
+  if (!user.user_metadata?.onboarded) {
+    redirect("/onboarding");
+  }
+
+  redirect("/");
 }
 
-if (!user.user_metadata?.onboarded) {
-  redirect("/onboarding");
-}
-
-
-  // ── Fetch today's habits ────────────────────
-  const today = new Date().toISOString().split("T")[0]; // 'YYYY-MM-DD'
-
-  const { data: habits } = await supabase
-    .from("habits")
-    .select("*")
-    .eq("user_id", user.id)
-    .eq("archived", false)
-    .eq("frequency", "daily")
-    .order("order_index", { ascending: true });
-
-  // ── Fetch today's check-ins ─────────────────
-  const { data: checkIns } = await supabase
-    .from("check_ins")
-    .select("habit_id, completed")
-    .eq("user_id", user.id)
-    .eq("date", today);
-
-  const checkedIds = new Set(
-    (checkIns ?? []).filter((c) => c.completed).map((c) => c.habit_id)
-  );
-
-  const totalHabits    = habits?.length ?? 0;
-  const completedCount = checkedIds.size;
-
-  // ── Fetch active goals (max 2 for dashboard) ─
-  const { data: goals } = await supabase
-    .from("goals")
-    .select("*")
-    .eq("user_id", user.id)
-    .eq("status", "active")
-    .limit(2);
-
+function LandingPage() {
   return (
-    <div className="px-4 pt-10 pb-6 flex flex-col gap-6">
+    <main className="min-h-screen bg-bento-bg text-bento-text flex items-center justify-center px-6">
+      <section className="w-full max-w-sm flex flex-col items-center text-center gap-8">
+        <img
+          src="/stryde-logo%20.png"
+          alt="Stryde logo"
+          className="h-20 w-20 rounded-2xl object-contain"
+        />
 
-      {/* ── Greeting header ─────────────────── */}
-      <div>
-        <div className="flex justify-between">
-          <p className="text-sm text-bento-muted">
-          {getGreeting()}
-        </p>
-
-        <SignOutButton />
-      </div>
-        
-        <h1 className="text-2xl font-bold mt-0.5 text-bento-text">
-          {user.user_metadata?.name ?? "Let's get to work."}
-        </h1>
-      </div>
-
-      {/* ── Progress ring + streak row ───────── */}
-      <div className="flex items-center justify-between rounded-2xl p-5 bg-bento-card border border-bento-border">
-        <ProgressRing total={totalHabits} completed={completedCount} size={110} />
-        <div className="flex flex-col items-end gap-3">
-          <div className="text-right">
-            <p className="text-xs text-bento-muted">Today</p>
-            <p className="text-lg font-bold text-bento-text">
-              {completedCount}/{totalHabits} done
-            </p>
-          </div>
-          <StreakBadge userId={user.id} />
-        </div>
-      </div>
-
-      {/* ── Today's habits (preview, max 4) ─── */}
-      <section>
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-base font-semibold text-bento-text">
-            Today&apos;s habits
-          </h2>
-          <a href="/habits" className="text-xs text-stryde-primary">
-            See all →
-          </a>
+        <div className="flex flex-col gap-3">
+          <h1 className="text-3xl font-bold">Welcome to Stryde</h1>
+          <p className="text-base font-medium text-bento-muted">
+            Build streaks. Not excuses.
+          </p>
         </div>
 
-        {totalHabits === 0 ? (
-          <EmptyState
-            icon="target"
-            message="No habits yet. Add your first habit and start your streak today."
-            ctaLabel="+ Add a habit"
-            ctaHref="/habits/new"
-          />
-        ) : (
-          <div className="flex flex-col gap-2">
-            {(habits ?? []).slice(0, 4).map((habit) => (
-              <HabitCard
-                key={habit.id}
-                habit={habit}
-                userId={user.id}
-                isChecked={checkedIds.has(habit.id)}
-              />
-            ))}
-          </div>
-        )}
+        <form action={getStarted} className="w-full">
+          <button
+            type="submit"
+            className="w-full rounded-xl bg-stryde-primary px-5 py-4 text-sm font-semibold text-white"
+          >
+            Get Started
+          </button>
+        </form>
       </section>
-
-      {/* ── Active goals preview ─────────────── */}
-      {goals && goals.length > 0 && (
-        <section>
-          <div className="flex items-center justify-between mb-3">
-          <h2 className="text-base font-semibold text-bento-text">
-              Active goals
-            </h2>
-            <a href="/goals" className="text-xs text-stryde-primary text">
-              See all →
-            </a>
-          </div>
-          <div className="flex flex-col gap-2">
-            {goals.map((goal) => (
-              <GoalCard key={goal.id} goal={goal} />
-            ))}
-          </div>
-        </section>
-      )}
-
-    </div>
+    </main>
   );
+}
+
+export default async function HomePage() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (user?.user_metadata?.onboarded) {
+    return <DashboardHome user={user} />;
+  }
+
+  if (user) {
+    return <LandingPage />;
+  }
+
+  const cookieStore = await cookies();
+  const hasSeenLanding = cookieStore.get(LANDING_SEEN_COOKIE)?.value === "true";
+
+  if (hasSeenLanding) {
+    redirect("/sign-in");
+  }
+
+  return <LandingPage />;
 }
