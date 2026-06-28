@@ -2,7 +2,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase-server";
-import LandingPage from "@/app/intro/page"
+import LandingPage from "@/components/intro/LandingPage"
 
 
 const LANDING_SEEN_COOKIE = "stryde_landing_seen";
@@ -39,10 +39,6 @@ export default async function HomePage() {
 
   if (user?.user_metadata?.onboarded) {
    redirect("/dashboard") ;
-  }
-
-  if (user) {
-    return <LandingPage />;
   }
 
   const cookieStore = await cookies();
