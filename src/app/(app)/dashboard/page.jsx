@@ -6,6 +6,10 @@ import EmptyState from "@/components/ui/EmptyState";
 import GoalCard from "@/components/goals/GoalCard";
 import SignOutButton from "@/components/ui/Reusable/SignOutButton";
 
+
+
+
+
 function getGreeting() {
   const hour = new Date().getHours();
   if (hour < 12) return "Good morning";
@@ -13,8 +17,11 @@ function getGreeting() {
   return "Good evening";
 }
 
-export default async function DashboardHome({ user }) {
+export default async function DashboardHome() {
   const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   const today = new Date().toISOString().split("T")[0];
 
   const { data: habits } = await supabase

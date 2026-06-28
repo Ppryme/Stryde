@@ -1,7 +1,7 @@
 import Image from "next/image";
 import strydeImage from "@/assets/images/stryde-logo .png";
 
-export default function LandingPage() {
+export default function LandingPage({getStarted}) {
   return (
     <main className="min-h-screen bg-bento-bg text-bento-text flex items-center justify-center px-6">
       <section className="flex flex-1 flex-col items-center text-center max-w-2xl">

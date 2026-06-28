@@ -1,9 +1,9 @@
 
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import DashboardHome from "@/components/dashboard/DashboardHome";
+import DashboardHome from "@/app/(app)/dashboard/page";
 import { createClient } from "@/lib/supabase-server";
-import LandingPage from "./Intro/page";
+import LandingPage from "@/app/intro/page";
 
 
 const LANDING_SEEN_COOKIE = "stryde_landing_seen";
@@ -44,7 +44,7 @@ export default async function HomePage() {
   } = await supabase.auth.getUser();
 
   if (user?.user_metadata?.onboarded) {
-    return <DashboardHome user={user} />;
+   redirect("/dashboard") ;
   }
 
   if (user) {
@@ -58,5 +58,5 @@ export default async function HomePage() {
     redirect("/sign-in");
   }
 
-  return <LandingPage />;
+  return <LandingPage getStarted = {getStarted} />;
 }
