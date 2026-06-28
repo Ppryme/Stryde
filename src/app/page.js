@@ -1,9 +1,8 @@
 
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import DashboardHome from "@/app/(app)/dashboard/page";
 import { createClient } from "@/lib/supabase-server";
-import LandingPage from "@/app/intro/page";
+import LandingPage from "@/app/intro/page"
 
 
 const LANDING_SEEN_COOKIE = "stryde_landing_seen";
@@ -28,11 +27,6 @@ async function getStarted() {
     redirect("/sign-in");
   }
 
-  if (!user.user_metadata?.onboarded) {
-    redirect("/onboarding");
-  }
-
-  redirect("/");
 }
 
 
