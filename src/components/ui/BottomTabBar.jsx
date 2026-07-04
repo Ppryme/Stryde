@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const TABS = [
-  { href: "/", label: "Home", icon: "ti-home" },
+  { href: "/dashboard", label: "Home", icon: "ti-home" },
   { href: "/checkin", label: "Check in", icon: "ti-circle-check" },
   { href: "/goals", label: "Goals", icon: "ti-target" },
   { href: "/analytics", label: "Analytics", icon: "ti-chart-bar" },
@@ -18,8 +18,8 @@ export default function BottomTabBar() {
   return (
     <nav className="fixed bottom-0 left-0 right-0 h-14 flex items-stretch z-50 bg-bento-card border-t border-bento-border">
       {TABS.map((tab) => {
-        const isActive = tab.href === "/"
-          ? pathname === "/"
+        const isActive = tab.href === "/dashboard"
+          ? pathname === "/dashboard"
           : pathname.startsWith(tab.href);
 
         return (
