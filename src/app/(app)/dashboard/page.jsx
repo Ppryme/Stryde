@@ -1,10 +1,12 @@
 import { createClient } from "@/lib/supabase-server";
+import { signOut } from "@/lib/auth";
 import ProgressRing from "@/components/ui/ProgressRing";
 import StreakBadge from "@/components/streaks/StreakBadge";
 import HabitCard from "@/components/habits/HabitCard";
 import EmptyState from "@/components/ui/EmptyState";
 import GoalCard from "@/components/goals/GoalCard";
 import SignOutButton from "@/components/ui/Reusable/SignOutButton";
+import Spinner from "@/components/ui/Reusable/Spinner";
 
 
 
@@ -16,6 +18,9 @@ function getGreeting() {
   if (hour < 17) return "Good afternoon";
   return "Good evening";
 }
+
+const signedOut = signOut();
+
 
 export default async function DashboardHome() {
   const supabase = await createClient();
@@ -54,6 +59,7 @@ export default async function DashboardHome() {
 
   return (
     <div className="px-4 pt-10 pb-6 flex flex-col gap-6">
+      { signedOut ? <p> Signing out... <Spinner /></p>  : null }
       <div>
         <div className="flex justify-between">
           <p className="text-sm text-bento-muted">{getGreeting()}</p>

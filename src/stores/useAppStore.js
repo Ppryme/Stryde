@@ -1,5 +1,5 @@
 // stores/useAppStore.js
-import { create } from 'zustand';
+import { create } from "zustand";
 
 const useAppStore = create((set) => ({
   user: null,
@@ -7,10 +7,13 @@ const useAppStore = create((set) => ({
   todayCheckIns: {},
   isOnline: true,
 
+  // Global Loading Overlay
+  loading: false,
+  loadingMessage: "",
+
   setUser: (user) => set({ user }),
   setHabits: (habits) => set({ habits }),
 
-  // Mark a habit checked in (optimistic)
   markCheckedIn: (habitId, completed) =>
     set((state) => ({
       todayCheckIns: {
@@ -20,6 +23,18 @@ const useAppStore = create((set) => ({
     })),
 
   setOnline: (isOnline) => set({ isOnline }),
+
+  showLoading: (message = "Loading...") =>
+    set({
+      loading: true,
+      loadingMessage: message,
+    }),
+
+  hideLoading: () =>
+    set({
+      loading: false,
+      loadingMessage: "",
+    }),
 }));
 
 export default useAppStore;
