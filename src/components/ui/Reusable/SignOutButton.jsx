@@ -11,9 +11,12 @@ export default function SignOutButton() {
   const hideLoading = useAppStore((state) => state.hideLoading);
 
   async function handleSignOut() {
-  const { error } = await signOut();
+    showLoading("Signing out...");
 
-   showLoading("Signing out...");
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      const { error } = await signOut();
+
+  
 
   if (!error) {
     router.push("/sign-in");

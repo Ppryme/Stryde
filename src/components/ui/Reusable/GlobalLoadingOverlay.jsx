@@ -10,7 +10,7 @@ export default function GlobalLoadingOverlay() {
   if (!loading) return null;
 
   return (
-    <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/45 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/45 backdrop-blur-sm">
       <div className="flex items-center gap-3 rounded-2xl border border-bento-border px-6 py-5 shadow-xl">
         <Spinner />
 
