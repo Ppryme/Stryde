@@ -85,10 +85,10 @@ export default function OnboardingClient() {
         <section className="flex flex-1 flex-col items-center text-center">
           <div className="w-full max-w-2xl mx-auto">
             <p className="text-sm sm:text-base font-semibold text-bento-muted">
-              Welcome to Stryde
+              Let&apos;s get started
             </p>
-            <h1 className="mt-3 text-4xl sm:text-5xl lg:text-6xl font-black leading-tight text-bento-text">
-              Build streaks. Not excuses
+            <h1 className="mt-3 text-3xl sm:text-4xl lg:text-5xl font-black leading-tight text-bento-text">
+             Boost Productivity and Build Lasting Habits with Stryde
             </h1>
           </div>
 

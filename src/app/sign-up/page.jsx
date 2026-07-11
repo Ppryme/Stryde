@@ -15,12 +15,19 @@ export default function SignUpPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   async function handleSubmit() {
     setLoading(true);
     setError("");
+
+    if (password !== confirmPassword) {
+    setError("Passwords do not match.");
+    setLoading(false);
+    return;
+  }
 
     const { error } = await signUp(email, password, name);
 
@@ -50,6 +57,8 @@ export default function SignUpPage() {
             placeholder="Name"
             value={name}
             onChange={(e) => setName(e.target.value)}
+            type="text"
+            autoComplete="name"
           />
 
           <Input
@@ -66,6 +75,26 @@ export default function SignUpPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="pr-12"
+              autoComplete="new-password"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword((prev) => !prev)}
+              aria-label={showPassword ? "Hide password" : "Show password"}
+              className="absolute inset-y-0 right-0 flex items-center px-4 text-xs font-medium text-bento-muted"
+            >
+              {showPassword ? "Hide" : "Show"}
+            </button>
+          </div>
+
+          <div className="relative">
+            <Input
+              type={showPassword ? "text" : "password"}
+              placeholder="Confirm Password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              className="pr-12"
+              autoComplete="new-password"
             />
             <button
               type="button"
