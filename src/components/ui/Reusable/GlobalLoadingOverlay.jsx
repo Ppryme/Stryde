@@ -10,13 +10,14 @@ export default function GlobalLoadingOverlay() {
   if (!loading) return null;
 
   return (
-    
-      <div className="flex items-center gap-3 rounded-2xl border border-bento-border px-6 py-5 shadow-xl">
+    <div className="max-w-full flex items-center justify-center fixed right-50 left-50 top-8">
+      <div className=" flex items-center gap-6 ">
         <Spinner />
 
         <p className="text-sm font-medium text-white">
-          {message}
+          {message} 
         </p>
+      </div>
       </div>
     
   );
