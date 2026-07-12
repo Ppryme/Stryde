@@ -5,7 +5,7 @@ import HabitCard from "@/components/habits/HabitCard";
 import EmptyState from "@/components/ui/EmptyState";
 import GoalCard from "@/components/goals/GoalCard";
 import SignOutButton from "@/components/ui/Reusable/SignOutButton";
-import GlobalLoadingOverlay from "@/components/ui/Reusable/GlobalLoadingOverlay";
+
 
 
 function getGreeting() {
@@ -55,7 +55,7 @@ export default async function DashboardHome() {
   return (
     <div className="px-4 pt-10 pb-6 flex flex-col gap-6">
 
-      <GlobalLoadingOverlay />
+     
 
       <div>
         <div className="flex justify-between">
