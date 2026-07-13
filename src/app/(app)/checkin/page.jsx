@@ -1,4 +1,3 @@
-
 import { createClient } from "@/lib/supabase-server";
 import { redirect } from "next/navigation";
 import CheckInList from "@/components/checkin/checkInList";
@@ -34,53 +33,32 @@ export default async function CheckInPage() {
     .eq("user_id", user.id)
     .eq("date", today);
 
-  // Build a map: { habitId: { completed, note } }
   const checkInMap = {};
   (checkIns ?? []).forEach((c) => {
     checkInMap[c.habit_id] = { completed: c.completed, note: c.note };
   });
 
-  const totalHabits    = habits?.length ?? 0;
-  const completedCount = Object.values(checkInMap).filter((c) => c.completed).length;
-
   return (
-    <div className="px-4 pt-10 pb-6">
-
+    <div className="px-4 pt-10 pb-6 mx-auto max-w-6xl sm:px-6 lg:px-8">
       {/* Header */}
       <p className="text-sm mb-0.5 text-bento-muted">
         {new Date().toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" })}
       </p>
+      
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold mb-1 text-bento-text">
-        {getGreeting()}
-      </h1>
-
-      <span>
-        <SignOutButton />
-      </span>
+          {getGreeting()}
+        </h1>
+        <span>
+          <SignOutButton />
+        </span>
       </div>
 
       <p className="text-sm mb-6 text-bento-muted">
         Your streak is on the line.
       </p>
 
-      {/* Progress bar */}
-      <div className="mb-6">
-        <div className="flex justify-between text-xs mb-1.5 text-bento-muted">
-          <span>{completedCount} of {totalHabits} done</span>
-          <span>{totalHabits > 0 ? Math.round((completedCount / totalHabits) * 100) : 0}%</span>
-        </div>
-        <div className="h-1.5 rounded-full overflow-hidden bg-bento-border">
-          <div
-            className="h-full rounded-full transition-all duration-500 bg-stryde-primary"
-            style={{
-              width: `${totalHabits > 0 ? (completedCount / totalHabits) * 100 : 0}%`,
-            }}
-          />
-        </div>
-      </div>
-
-      {/* Habit list — client component handles toggling */}
+      {/* Habit list handles both the progress bar and toggling interactively */}
       <CheckInList
         habits={habits ?? []}
         checkInMap={checkInMap}

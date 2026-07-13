@@ -4,6 +4,7 @@ import { useState } from "react";
 import { db } from "@/lib/db";
 import { getSupabase } from "@/lib/supabase";
 import { recalculateStreak } from "@/lib/streakUtils";
+import { CheckCircle2 } from "lucide-react";
 
 export default function CheckInCard({ habit, userId, today, isChecked, onToggle, onMilestone }) {
   const [pressing, setPressing] = useState(false);
@@ -12,7 +13,7 @@ export default function CheckInCard({ habit, userId, today, isChecked, onToggle,
     const newValue = !isChecked;
 
     setPressing(true);
-    onToggle(habit.id, newValue);
+    onToggle(habit.id, newValue); // Triggers parent updates instantly
     setTimeout(() => setPressing(false), 150);
 
     const existing = await db.checkIns
@@ -51,22 +52,22 @@ export default function CheckInCard({ habit, userId, today, isChecked, onToggle,
       aria-pressed={isChecked}
       data-checked={isChecked}
       data-pressing={pressing}
-      className="w-full min-h-[72px] flex items-center gap-4 px-5 py-4 rounded-2xl border text-left transition-all bg-bento-card border-bento-border data-checked:bg-stryde-success-light data-checked:border-stryde-success data-pressing:scale-[0.97]"
+      className="w-full min-h-[72px] flex items-center gap-4 px-5 py-4 rounded-2xl border text-left transition-all bg-bento-card border-bento-border data-checked:opacity-65 data-pressing:scale-[0.97]"
     >
-      <div
-        className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-all ${
-          isChecked
-            ? "bg-stryde-success text-white"
-            : "bg-transparent border border-bento-border text-bento-muted"
-        }`}
-      >
-        {isChecked && <i className="ti ti-check text-base" aria-hidden="true" />}
+      {/* Lucide CheckCircle2 for high-end look & consistency with HabitCard */}
+      <div className="flex-shrink-0 transition-all">
+        {isChecked ? (
+          <CheckCircle2 className="w-8 h-8 text-green-500" />
+        ) : (
+          <div className="w-8 h-8 rounded-full bg-transparent border border-bento-border" />
+        )}
       </div>
 
       <div className="flex-1 min-w-0">
+        {/* Adjusted Checked colors for premium look against Bento dark styling */}
         <p
-          className={`text-sm font-semibold ${
-            isChecked ? "text-stryde-success-dark line-through" : "text-bento-text"
+          className={`text-sm font-semibold transition-colors ${
+            isChecked ? "text-bento-muted line-through" : "text-bento-text"
           }`}
         >
           {habit.name}

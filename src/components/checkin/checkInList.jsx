@@ -1,74 +1,66 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect } from "react";
+import useAppStore from "@/stores/useAppStore";
 import CheckInCard from "./CheckInCard";
-import { STREAK_MILESTONES } from "@/lib/design-token";
 
-export default function CheckInList({ habits, checkInMap: initialMap, userId, today }) {
-  const [checkInMap, setCheckInMap] = useState(initialMap);
-  const [milestoneMsg, setMilestoneMsg] = useState("");
+export default function CheckInList({ habits, checkInMap, userId, today }) {
+  const todayCheckIns = useAppStore((state) => state.todayCheckIns);
+  const markCheckedIn = useAppStore((state) => state.markCheckedIn);
 
-  const total = habits.length;
-  const completed = Object.values(checkInMap).filter((c) => c.completed).length;
-  const allDone = total > 0 && completed === total;
-
-  function handleToggle(habitId, newValue) {
-    setCheckInMap((prev) => ({
-      ...prev,
-      [habitId]: { ...prev[habitId], completed: newValue },
-    }));
-  }
-
-  function handleMilestone(streakCount) {
-    if (STREAK_MILESTONES.includes(streakCount)) {
-      const messages = {
-        3: "3 days straight. Momentum is building.",
-        7: "A full week. Most people quit before this. You didn't.",
-        14: "14 days. This is becoming part of who you are.",
-        30: "30 days. You built a habit. That's everything.",
-        100: "100 days. You are the 1%.",
-      };
-      setMilestoneMsg(messages[streakCount] ?? `${streakCount}-day streak!`);
-      setTimeout(() => setMilestoneMsg(""), 4000);
+  // Initialize Zustand with current DB values on mount
+  useEffect(() => {
+    const initialMap = {};
+    Object.keys(checkInMap).forEach((id) => {
+      initialMap[id] = checkInMap[id].completed;
+    });
+    
+    if (habits?.length) {
+      useAppStore.setState({ habits });
     }
-  }
+    useAppStore.setState({ todayCheckIns: initialMap });
+  }, [checkInMap, habits]);
 
-  if (habits.length === 0) {
-    return (
-      <p className="text-sm text-center py-8 text-bento-muted">
-        No habits yet.{" "}
-        <a href="/habits/new" className="text-stryde-primary">
-          Add one &rarr;
-        </a>
-      </p>
-    );
+  const totalHabits = habits?.length ?? 0;
+  const completedCount = habits.filter((habit) => !!todayCheckIns[habit.id]).length;
+  const percentage = totalHabits > 0 ? Math.round((completedCount / totalHabits) * 100) : 0;
+
+  function handleToggle(habitId, completed) {
+    markCheckedIn(habitId, completed);
   }
 
   return (
-    <div className="flex flex-col gap-3">
-      {milestoneMsg && (
-        <div className="px-4 py-3 rounded-xl text-sm font-medium text-center bg-stryde-fire-light text-stryde-fire-dark">
-          {milestoneMsg}
+    <div className="flex flex-col gap-6">
+      {/* Reactive Progress Bar inside Client Component */}
+      <div className="mb-2">
+        <div className="flex justify-between text-xs mb-1.5 text-bento-muted">
+          <span>{completedCount} of {totalHabits} done</span>
+          <span>{percentage}%</span>
         </div>
-      )}
-
-      {allDone && (
-        <div className="px-4 py-3 rounded-xl text-sm font-medium text-center bg-stryde-success-light text-stryde-success-dark">
-          All done. Streak extended. See you tomorrow.
+        <div className="h-1.5 rounded-full overflow-hidden bg-bento-border">
+          <div
+            className="h-full rounded-full transition-all duration-500 bg-stryde-primary"
+            style={{ width: `${percentage}%` }}
+          />
         </div>
-      )}
+      </div>
 
-      {habits.map((habit) => (
-        <CheckInCard
-          key={habit.id}
-          habit={habit}
-          userId={userId}
-          today={today}
-          isChecked={checkInMap[habit.id]?.completed ?? false}
-          onToggle={handleToggle}
-          onMilestone={handleMilestone}
-        />
-      ))}
+      {/* Check In Cards */}
+      <div className="flex flex-col gap-3">
+        {habits.map((habit) => {
+          const isChecked = !!todayCheckIns[habit.id];
+          return (
+            <CheckInCard
+              key={habit.id}
+              habit={habit}
+              userId={userId}
+              today={today}
+              isChecked={isChecked}
+              onToggle={handleToggle}
+            />
+          );
+        })}
+      </div>
     </div>
   );
 }

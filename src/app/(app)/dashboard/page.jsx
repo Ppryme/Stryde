@@ -1,13 +1,7 @@
 import { createClient } from "@/lib/supabase-server";
-import ProgressRing from "@/components/ui/ProgressRing";
-import StreakBadge from "@/components/streaks/StreakBadge";
-import HabitCard from "@/components/habits/HabitCard";
-import EmptyState from "@/components/ui/EmptyState";
+import DashboardClient from "@/components/dasboard/DashboardClient";
 import GoalCard from "@/components/goals/GoalCard";
 import SignOutButton from "@/components/ui/Reusable/SignOutButton";
-import useAppStore from "@/stores/useAppStore";
-
-
 
 function getGreeting() {
   const hour = new Date().getHours();
@@ -16,10 +10,7 @@ function getGreeting() {
   return "Good evening";
 }
 
-
-
 export default async function DashboardHome() {
-
   const supabase = await createClient();
   const {
     data: { user },
@@ -40,12 +31,9 @@ export default async function DashboardHome() {
     .eq("user_id", user.id)
     .eq("date", today);
 
-  const checkedIds = new Set(
-    (checkIns ?? []).filter((c) => c.completed).map((c) => c.habit_id)
-  );
-
-  const totalHabits = habits?.length ?? 0;
-  const completedCount = checkedIds.size;
+  const checkedIds = (checkIns ?? [])
+    .filter((c) => c.completed)
+    .map((c) => c.habit_id);
 
   const { data: goals } = await supabase
     .from("goals")
@@ -56,11 +44,9 @@ export default async function DashboardHome() {
 
   return (
     <div className="px-4 pt-10 pb-6 flex flex-col gap-6 mx-auto max-w-6xl sm:px-6 lg:px-8">
-
       <div>
         <div className="flex justify-between">
           <p className="text-sm text-bento-muted">{getGreeting()}</p>
-
           <SignOutButton />
         </div>
 
@@ -69,49 +55,12 @@ export default async function DashboardHome() {
         </h1>
       </div>
 
-      <div className="flex items-center justify-between rounded-2xl p-5 bg-bento-card border border-bento-border">
-        <ProgressRing total={totalHabits} completed={completedCount} size={110} />
-        <div className="flex flex-col items-end gap-3">
-          <div className="text-right">
-            <p className="text-xs text-bento-muted">Today</p>
-            <p className="text-lg font-bold text-bento-text">
-              {completedCount}/{totalHabits} done
-            </p>
-          </div>
-          <StreakBadge userId={user.id} />
-        </div>
-      </div>
-
-      <section>
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-base font-semibold text-bento-text">
-            Today&apos;s habits
-          </h2>
-          <a href="/habits" className="text-xs text-stryde-primary">
-            See all
-          </a>
-        </div>
-
-        {totalHabits === 0 ? (
-          <EmptyState
-            icon="target"
-            message="No habits yet. Add your first habit and start your streak today."
-            ctaLabel="+ Add a habit"
-            ctaHref="/habits/new"
-          />
-        ) : (
-          <div className="flex flex-col gap-2">
-            {(habits ?? []).slice(0, 4).map((habit) => (
-              <HabitCard
-                key={habit.id}
-                habit={habit}
-                userId={user.id}
-                isChecked={checkedIds.has(habit.id)}
-              />
-            ))}
-          </div>
-        )}
-      </section>
+      {/* Unified Interactive Client Section */}
+      <DashboardClient
+        userId={user.id}
+        initialHabits={habits ?? []}
+        initialCheckedIds={checkedIds}
+      />
 
       {goals && goals.length > 0 && (
         <section>
