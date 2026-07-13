@@ -21,9 +21,11 @@ export default function SignOutButton() {
 
   if (!error) {
     router.push("/sign-in");
-      hideLoading();
     router.refresh();
+    hideLoading();
   }
+
+  
 
 
 }
