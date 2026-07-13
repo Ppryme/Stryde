@@ -5,6 +5,7 @@ import HabitCard from "@/components/habits/HabitCard";
 import EmptyState from "@/components/ui/EmptyState";
 import GoalCard from "@/components/goals/GoalCard";
 import SignOutButton from "@/components/ui/Reusable/SignOutButton";
+import useAppStore from "@/stores/useAppStore";
 
 
 
@@ -18,6 +19,7 @@ function getGreeting() {
 
 
 export default async function DashboardHome() {
+
   const supabase = await createClient();
   const {
     data: { user },
