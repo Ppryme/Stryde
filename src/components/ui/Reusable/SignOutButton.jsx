@@ -24,7 +24,7 @@ export default function SignOutButton() {
     router.refresh();
   }
 
-    hideLoading();
+   
 }
 
   return (
