@@ -14,16 +14,21 @@ export default function SignOutButton() {
   async function handleSignOut() {
     showLoading("Signing out...");
 
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      const { error } = await signOut();
-  
+    const start = Date.now();
 
-  if (!error) {
-    router.push("/sign-in");
-    router.refresh();
-  }
+    const { error } = await signOut();
 
-    hideLoading();
+    const elapsed = Date.now() - start;
+
+    if (elapsed < 500) {
+        await new Promise(resolve =>
+            setTimeout(resolve, 500 - elapsed)
+        );
+    }
+
+    if (!error) {
+        router.push("/sign-in");
+    }
 }
 
   return (
