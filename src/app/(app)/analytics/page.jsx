@@ -1,13 +1,11 @@
-// src/app/analytics/page.jsx
-// ─────────────────────────────────────────────
-// ANALYTICS PAGE — progress charts and heatmap
-// Server component fetches data, client components render charts
-// ─────────────────────────────────────────────
+
 import { createClient } from "@/lib/supabase-server";
 import { redirect } from "next/navigation";
 import HeatmapCalendar from "@/components/analytics/HeatmapCalendar";
 import TrendChart from "@/components/analytics/TrendChart";
 import { getOneYearAgoDate } from "@/lib/date";
+import SignOutButton from "@/components/ui/Reusable/SignOutButton";
+
 
 export const metadata = { title: "Analytics" };
 
@@ -41,9 +39,14 @@ export default async function AnalyticsPage() {
   return (
     <div className="px-4 pt-10 pb-6 flex flex-col gap-6">
 
-      <h1 className="text-2xl font-bold text-bento-text">
+      <div className="flex items-center justify-between">
+       <h1 className="text-2xl font-bold text-bento-text">
         Your progress
       </h1>
+
+       <span><SignOutButton /></span> 
+      </div>
+
 
       {/* Stats row */}
       <div className="grid grid-cols-3 gap-3">

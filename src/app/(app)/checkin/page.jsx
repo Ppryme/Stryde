@@ -1,12 +1,8 @@
-// src/app/checkin/page.jsx
-// ─────────────────────────────────────────────
-// CHECK-IN PAGE — daily habit completion screen
-// The core loop: user opens this and taps habits done
-// Server fetches habits + today's check-ins
-// ─────────────────────────────────────────────
+
 import { createClient } from "@/lib/supabase-server";
 import { redirect } from "next/navigation";
 import CheckInList from "@/components/checkin/checkInList";
+import SignOutButton from "@/components/ui/Reusable/SignOutButton";
 
 export const metadata = { title: "Check in" };
 
@@ -54,9 +50,16 @@ export default async function CheckInPage() {
       <p className="text-sm mb-0.5 text-bento-muted">
         {new Date().toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" })}
       </p>
-      <h1 className="text-2xl font-bold mb-1 text-bento-text">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold mb-1 text-bento-text">
         {getGreeting()}
       </h1>
+
+      <span>
+        <SignOutButton />
+      </span>
+      </div>
+
       <p className="text-sm mb-6 text-bento-muted">
         Your streak is on the line.
       </p>

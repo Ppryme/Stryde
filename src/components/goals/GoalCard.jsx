@@ -21,7 +21,7 @@ export default function GoalCard({ goal }) {
         </Badge>
       </div>
 
-      <div className="h-1.5 rounded-full overflow-hidden mb-2 bg-bento-border">
+      <div className="h-1.5 rounded-full  overflow-hidden mb-2 bg-bento-border">
         <div
           className="h-full rounded-full transition-all duration-500 bg-stryde-primary"
           style={{ width: `${goal.progress_pct ?? 0}%` }}

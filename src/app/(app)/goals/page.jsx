@@ -9,6 +9,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import GoalCard from "@/components/goals/GoalCard";
 import EmptyState from "@/components/ui/EmptyState";
+import SignOutButton from "@/components/ui/Reusable/SignOutButton";
 
 export const metadata = { title: "Goals" };
 
@@ -35,13 +36,19 @@ export default async function GoalsPage() {
         <h1 className="text-2xl font-bold text-bento-text">
           Goals
         </h1>
+
+        <div className="flex items-center justify-between justify-center gap-8">
         <Link
           href="/goals/new"
-          className="flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium bg-stryde-primary text-white hover:bg-stryde-primary-dark transition-colors"
+          className="flex items-center gap-1.5 px-6 py-3 text-center rounded-full text-sm font-medium bg-stryde-primary text-white hover:bg-stryde-primary-dark transition-colors"
         >
-          <i className="ti ti-plus text-sm" aria-hidden="true" />
-          Add
+          
+         Add
         </Link>
+
+         <span><SignOutButton /></span> 
+        </div>
+        
       </div>
 
       {/* Empty state */}

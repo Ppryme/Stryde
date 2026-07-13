@@ -10,11 +10,11 @@ export default function GlobalLoadingOverlay() {
   if (!loading) return null;
 
   return (
-    <div className="max-w-full flex items-center justify-center fixed right-50 left-50 top-8">
-      <div className=" flex items-center gap-6 ">
+    <div className=" flex items-center justify-center ">
+      <div className=" flex items-center justify-center gap-8 px-10 py-4 ">
         <Spinner />
 
-        <p className="text-sm font-medium text-white">
+        <p className="text-sm font-medium text-white nowrap">
           {message} 
         </p>
       </div>

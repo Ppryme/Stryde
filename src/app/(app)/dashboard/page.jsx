@@ -53,9 +53,7 @@ export default async function DashboardHome() {
     .limit(2);
 
   return (
-    <div className="px-4 pt-10 pb-6 flex flex-col gap-6">
-
-     
+    <div className="px-4 pt-10 pb-6 flex flex-col gap-6 mx-auto max-w-6xl sm:px-6 lg:px-8">
 
       <div>
         <div className="flex justify-between">

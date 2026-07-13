@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { getSupabase } from "@/lib/supabase";
 import { recalculateStreak } from "@/lib/streakUtils";
 import { HABIT_CATEGORIES } from "@/lib/design-token";
+import { CheckCircle2} from "lucide-react"
 
 export default function HabitCard({ habit, userId, isChecked: initialChecked }) {
   const [isChecked, setIsChecked] = useState(initialChecked);
@@ -53,7 +54,8 @@ export default function HabitCard({ habit, userId, isChecked: initialChecked }) 
     <div
       data-checked={isChecked}
       data-pressing={pressing}
-      className="flex items-center gap-3 px-4 py-3 rounded-2xl border bg-bento-card border-bento-border transition-all data-checked:opacity-65 data-pressing:scale-[0.98]"
+      onClick={handleToggle}
+      className="flex items-center gap-3 cursor-pointer px-4 py-3 rounded-2xl border bg-bento-card border-bento-border transition-all data-checked:opacity-65 data-pressing:scale-[0.98]"
     >
       <div
         className="w-2.5 h-2.5 rounded-full flex-shrink-0"
@@ -64,8 +66,10 @@ export default function HabitCard({ habit, userId, isChecked: initialChecked }) 
         <p className={`text-sm font-semibold truncate text-bento-text ${isChecked ? "line-through" : ""}`}>
           {habit.name}
         </p>
+
+      
         <p className="text-[11px] capitalize text-bento-muted">
-          {habit.frequency} &middot; {habit.category}
+          {habit.frequency} &middot; {habit.category} 
         </p>
       </div>
 
@@ -73,13 +77,17 @@ export default function HabitCard({ habit, userId, isChecked: initialChecked }) 
         onClick={handleToggle}
         aria-label={isChecked ? "Mark incomplete" : "Mark complete"}
         aria-pressed={isChecked}
-        className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 transition-all ${
+        className={`w-7 h-7 flex items-center justify-center rounded-full  ${
           isChecked
-            ? "bg-stryde-success text-white"
-            : "bg-transparent border border-bento-border text-bento-muted"
+            ? "text-green-500"
+            : "border border-bento-border text-bento-muted"
         }`}
       >
-        {isChecked && <i className="ti ti-check text-sm" aria-hidden="true" />}
+       {isChecked ? (
+        <CheckCircle2 className="w-7 h-7 text-green-500" />
+       ) : (
+        null
+       )}
       </button>
     </div>
   );
