@@ -35,6 +35,9 @@ export default function Button({
         font-semibold
         transition-all
         duration-200
+        disabled:bg-bento-border
+        disabled:text-bento-muted/50
+        disabled:border-bento-border
         disabled:opacity-50
         disabled:cursor-not-allowed
         ${variants[variant]}

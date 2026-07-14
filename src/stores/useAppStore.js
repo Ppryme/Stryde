@@ -35,6 +35,14 @@ const useAppStore = create((set) => ({
       loading: false,
       loadingMessage: "",
     }),
+
+  // Undo Notification state
+  undoAction: null,
+  showUndo: (message, onUndo, onDismiss) =>
+    set({
+      undoAction: { message, onUndo, onDismiss },
+    }),
+  clearUndo: () => set({ undoAction: null }),
 }));
 
 export default useAppStore;

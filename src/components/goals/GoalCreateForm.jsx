@@ -13,9 +13,13 @@ import FormError from "@/components/ui/FormError";
 import FormLabel from "@/components/ui/FormLabel";
 import Input from "@/components/ui/Input";
 import Textarea from "@/components/ui/Textarea";
+import useAppStore from "@/stores/useAppStore";
 
 export default function GoalCreateForm({ userId }) {
   const router = useRouter();
+  const showLoading = useAppStore((state) => state.showLoading);
+  const hideLoading = useAppStore((state) => state.hideLoading);
+
   const [form, setForm] = useState({
     title:       "",
     description: "",
@@ -32,6 +36,7 @@ export default function GoalCreateForm({ userId }) {
   async function handleSave() {
     if (!form.title.trim()) { setError("Give your goal a title."); return; }
     setSaving(true);
+    showLoading("Saving goal...");
 
     const supabase = getSupabase();
     const { error: insertError } = await supabase.from("goals").insert({
@@ -44,6 +49,7 @@ export default function GoalCreateForm({ userId }) {
     });
 
     setSaving(false);
+    hideLoading();
 
     if (insertError) {
       setError("Something went wrong. Try again.");

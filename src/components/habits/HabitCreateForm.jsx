@@ -4,6 +4,7 @@
 // Saves to IndexedDB first (offline-safe), then syncs to Supabase
 // ─────────────────────────────────────────────
 "use client";
+
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { db } from "@/lib/db";
@@ -13,11 +14,15 @@ import Button from "@/components/ui/button";
 import FormError from "@/components/ui/FormError";
 import FormLabel from "@/components/ui/FormLabel";
 import Input from "@/components/ui/Input";
+import useAppStore from "@/stores/useAppStore";
 
 const FREQUENCIES = ["daily", "weekly"];
 
 export default function HabitCreateForm({ userId }) {
   const router  = useRouter();
+  const showLoading = useAppStore((state) => state.showLoading);
+  const hideLoading = useAppStore((state) => state.hideLoading);
+
   const [form, setForm] = useState({
     name:         "",
     category:     "health",
@@ -35,6 +40,7 @@ export default function HabitCreateForm({ userId }) {
   async function handleSave() {
     if (!form.name.trim()) { setError("Give your habit a name."); return; }
     setSaving(true);
+    showLoading("Saving habit...");
 
     const category = Object.values(HABIT_CATEGORIES).find((c) => c.id === form.category);
     const colorTag = category?.color ?? "#888780";
@@ -71,6 +77,7 @@ export default function HabitCreateForm({ userId }) {
     }
 
     setSaving(false);
+    hideLoading();
     router.push("/habits");
   }
 

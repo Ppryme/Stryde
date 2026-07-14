@@ -7,6 +7,7 @@ import CheckInCard from "./CheckInCard";
 export default function CheckInList({ habits, checkInMap, userId, today }) {
   const todayCheckIns = useAppStore((state) => state.todayCheckIns);
   const markCheckedIn = useAppStore((state) => state.markCheckedIn);
+  const storeHabits = useAppStore((state) => state.habits);
 
   // Initialize Zustand with current DB values on mount
   useEffect(() => {
@@ -21,8 +22,13 @@ export default function CheckInList({ habits, checkInMap, userId, today }) {
     useAppStore.setState({ todayCheckIns: initialMap });
   }, [checkInMap, habits]);
 
-  const totalHabits = habits?.length ?? 0;
-  const completedCount = habits.filter((habit) => !!todayCheckIns[habit.id]).length;
+  // Read habits from Zustand store (if populated), filtering out archived habits
+  const activeHabits = storeHabits.length > 0 
+    ? storeHabits.filter((h) => !h.archived) 
+    : (habits?.filter((h) => !h.archived) ?? []);
+
+  const totalHabits = activeHabits.length;
+  const completedCount = activeHabits.filter((habit) => !!todayCheckIns[habit.id]).length;
   const percentage = totalHabits > 0 ? Math.round((completedCount / totalHabits) * 100) : 0;
 
   function handleToggle(habitId, completed) {
@@ -47,7 +53,7 @@ export default function CheckInList({ habits, checkInMap, userId, today }) {
 
       {/* Check In Cards */}
       <div className="flex flex-col gap-3">
-        {habits.map((habit) => {
+        {activeHabits.map((habit) => {
           const isChecked = !!todayCheckIns[habit.id];
           return (
             <CheckInCard

@@ -20,6 +20,11 @@ export default function SignUpPage() {
   const [error, setError] = useState("");
 
   async function handleSubmit() {
+    if (!navigator.onLine) {
+      setError("You're offline. Connect to the internet.");
+      return;
+    }
+
     setLoading(true);
     setError("");
 
@@ -108,7 +113,7 @@ export default function SignUpPage() {
 
           <FormError message={error} className="text-sm mt-0" />
 
-          <Button onClick={handleSubmit} disabled={loading} className="w-full py-4 rounded-xl text-sm">
+          <Button onClick={handleSubmit} disabled={loading || !name.trim() || !email.trim() || !password.trim() || !confirmPassword.trim()} className="w-full py-4 rounded-xl text-sm">
             {loading ? "Creating..." : "Create Account"}
           </Button>
         </div>

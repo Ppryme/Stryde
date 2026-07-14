@@ -1,10 +1,12 @@
 // lib/sync.js
 import { db } from '@/lib/db';
-import { supabase } from '@/lib/supabase';
+import { getSupabase } from '@/lib/supabase';
 
 export async function syncQueue() {
   const pending = await db.queue.toArray();
   if (pending.length === 0) return;
+
+  const supabase = getSupabase();
 
   for (const item of pending) {
     try {
@@ -29,6 +31,14 @@ export async function syncQueue() {
           color_tag:    item.payload.colorTag,
           reminder_time: item.payload.reminderTime,
         });
+      }
+
+      if (item.type === 'UPDATE_HABIT') {
+        await supabase.from('habits').update({ name: item.payload.name }).eq('id', item.payload.habitId);
+      }
+
+      if (item.type === 'ARCHIVE_HABIT') {
+        await supabase.from('habits').update({ archived: true }).eq('id', item.payload.habitId);
       }
 
       // Remove from queue on success

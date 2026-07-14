@@ -9,6 +9,7 @@ import Input from "@/components/ui/Input";
 import { getSupabase } from "@/lib/supabase";
 import { HABIT_CATEGORIES } from "@/lib/design-token";
 import strydeImage from "@/assets/images/stryde-logo .png";
+import useAppStore from "@/stores/useAppStore";
 
 const STEPS = ["welcome", "goal", "habit"];
 
@@ -21,6 +22,9 @@ export default function OnboardingClient() {
   const [habitName, setHabitName] = useState("");
   const [frequency, setFrequency] = useState("daily");
 
+  const showLoading = useAppStore((state) => state.showLoading);
+  const hideLoading = useAppStore((state) => state.hideLoading);
+
   async function handleFinish() {
     const supabase = getSupabase();
     if (!habitName.trim()) {
@@ -29,6 +33,7 @@ export default function OnboardingClient() {
     }
 
     setLoading(true);
+    showLoading("Creating your first habit and completing onboarding...");
 
     const {
       data: { user },
@@ -61,24 +66,52 @@ export default function OnboardingClient() {
     if (updateError) {
       setError(updateError.message);
       setLoading(false);
+      hideLoading();
       return;
     }
 
     setLoading(false);
+    hideLoading();
     router.push("/");
   }
 
   return (
     <div className="min-h-dvh flex flex-col px-5 py-6 sm:px-8 sm:py-10 lg:max-w-5xl mx-auto">
-      <div className="flex gap-2 justify-center mb-8 sm:mb-10">
-        {STEPS.map((_, i) => (
-          <div
-            key={i}
-            className={`h-1.5 rounded-full transition-all duration-300 ${
-              i <= step ? "bg-stryde-primary" : "bg-bento-border"
-            } ${i === step ? "w-6" : "w-2"}`}
-          />
-        ))}
+      <div className="relative flex items-center justify-center mb-8 sm:mb-10 w-full min-h-[40px]">
+        {step > 0 && (
+          <button
+            onClick={() => {
+              setError("");
+              setStep((prev) => prev - 1);
+            }}
+            className="absolute left-0 p-2 text-bento-muted hover:text-bento-text transition-colors rounded-lg hover:bg-bento-card border border-transparent hover:border-bento-border flex items-center justify-center"
+            aria-label="Go back to previous step"
+          >
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M10 19l-7-7m0 0l7-7m-7 7h18"
+              />
+            </svg>
+          </button>
+        )}
+        <div className="flex gap-2">
+          {STEPS.map((_, i) => (
+            <div
+              key={i}
+              className={`h-1.5 rounded-full transition-all duration-300 ${
+                i <= step ? "bg-stryde-primary" : "bg-bento-border"
+              } ${i === step ? "w-6" : "w-2"}`}
+            />
+          ))}
+        </div>
       </div>
 
       {step === 0 && (

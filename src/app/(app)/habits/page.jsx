@@ -6,8 +6,7 @@
 import { createClient } from "@/lib/supabase-server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import HabitCard from "@/components/habits/HabitCard";
-import EmptyState from "@/components/ui/EmptyState";
+import HabitsClient from "@/components/habits/HabitsClient";
 
 export const metadata = { title: "Habits" };
 
@@ -31,9 +30,9 @@ export default async function HabitsPage() {
     .eq("user_id", user.id)
     .eq("date", today);
 
-  const checkedIds = new Set(
-    (checkIns ?? []).filter((c) => c.completed).map((c) => c.habit_id)
-  );
+  const checkedIds = (checkIns ?? [])
+    .filter((c) => c.completed)
+    .map((c) => c.habit_id);
 
   return (
     <div className="px-4 pt-10 pb-6">
@@ -52,26 +51,12 @@ export default async function HabitsPage() {
         </Link>
       </div>
 
-      {/* List */}
-      {!habits || habits.length === 0 ? (
-        <EmptyState
-          icon="target"
-          message="Nothing to track yet. Add your first habit and start your streak today."
-          ctaLabel="+ Add a habit"
-          ctaHref="/habits/new"
-        />
-      ) : (
-        <div className="flex flex-col gap-2">
-          {habits.map((habit) => (
-            <HabitCard
-              key={habit.id}
-              habit={habit}
-              userId={user.id}
-              isChecked={checkedIds.has(habit.id)}
-            />
-          ))}
-        </div>
-      )}
+      {/* List (Reactive Client Component) */}
+      <HabitsClient
+        initialHabits={habits ?? []}
+        userId={user.id}
+        initialCheckedIds={checkedIds}
+      />
     </div>
   );
 }

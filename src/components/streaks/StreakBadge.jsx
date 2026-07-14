@@ -8,7 +8,7 @@
 import { useState, useEffect } from "react";
 import { db } from "@/lib/db";
 
-export default function StreakBadge({ habitId, userId }) {
+export default function StreakBadge({ habitId, userId, trigger }) {
   const [streak, setStreak] = useState(null);
 
   useEffect(() => {
@@ -25,7 +25,7 @@ export default function StreakBadge({ habitId, userId }) {
       }
     }
     load();
-  }, [habitId, userId]);
+  }, [habitId, userId, trigger]);
 
   if (streak === null || streak === 0) return null;
 

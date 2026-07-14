@@ -4,10 +4,20 @@ import { useState } from "react";
 import { db } from "@/lib/db";
 import { getSupabase } from "@/lib/supabase";
 import { recalculateStreak } from "@/lib/streakUtils";
-import { CheckCircle2 } from "lucide-react";
+import { CheckCircle2, Edit2, Trash2 } from "lucide-react";
+import useAppStore from "@/stores/useAppStore";
 
 export default function CheckInCard({ habit, userId, today, isChecked, onToggle, onMilestone }) {
   const [pressing, setPressing] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editName, setEditName] = useState(habit.name);
+
+  // Hook into Zustand store to handle editing & deleting the habit
+  const habits = useAppStore((state) => state.habits);
+  const setHabits = useAppStore((state) => state.setHabits);
+  const showLoading = useAppStore((state) => state.showLoading);
+  const hideLoading = useAppStore((state) => state.hideLoading);
+  const showUndo = useAppStore((state) => state.showUndo);
 
   async function handleTap() {
     const newValue = !isChecked;
@@ -45,16 +55,123 @@ export default function CheckInCard({ habit, userId, today, isChecked, onToggle,
     }
   }
 
+  async function handleSaveEdit(e) {
+    if (e) e.stopPropagation();
+    if (!editName.trim()) return;
+
+    showLoading("Saving habit...");
+    const updatedName = editName.trim();
+
+    // 1. Update IndexedDB
+    await db.habits.update(habit.id, { name: updatedName });
+
+    // 2. Update Zustand store
+    const updatedHabits = habits.map((h) =>
+      h.id === habit.id ? { ...h, name: updatedName } : h
+    );
+    setHabits(updatedHabits);
+
+    // 3. Sync online or queue
+    if (navigator.onLine) {
+      const supabase = getSupabase();
+      await supabase.from("habits").update({ name: updatedName }).eq("id", habit.id);
+    } else {
+      await db.queue.add({
+        type: "UPDATE_HABIT",
+        payload: { habitId: habit.id, name: updatedName },
+        createdAt: new Date().toISOString(),
+      });
+    }
+
+    hideLoading();
+    setIsEditing(false);
+  }
+
+  async function handleDelete(e) {
+    if (e) e.stopPropagation();
+
+    showLoading("Deleting habit...");
+    const habitId = habit.id;
+    const originalHabits = [...habits];
+
+    // Optimistically filter out from Zustand store
+    setHabits(habits.filter((h) => h.id !== habitId));
+    hideLoading();
+
+    showUndo(
+      `Deleted "${habit.name}"`,
+      () => {
+        // Undo: Restore to Zustand store
+        setHabits(originalHabits);
+      },
+      async () => {
+        // Dismiss: Permanently delete/archive
+        await db.habits.update(habitId, { archived: true });
+
+        if (navigator.onLine) {
+          const supabase = getSupabase();
+          await supabase.from("habits").update({ archived: true }).eq("id", habitId);
+        } else {
+          await db.queue.add({
+            type: "ARCHIVE_HABIT",
+            payload: { habitId },
+            createdAt: new Date().toISOString(),
+          });
+        }
+      }
+    );
+  }
+
+  if (isEditing) {
+    return (
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="flex items-center gap-3 px-4 py-3 rounded-2xl border bg-bento-card border-stryde-primary transition-all w-full min-h-[72px]"
+      >
+        <input
+          type="text"
+          value={editName}
+          onChange={(e) => setEditName(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") handleSaveEdit(e);
+            if (e.key === "Escape") {
+              setEditName(habit.name);
+              setIsEditing(false);
+            }
+          }}
+          autoFocus
+          className="flex-1 bg-bento-bg text-bento-text text-sm px-3 py-1.5 rounded-xl border border-bento-border focus:outline-none focus:border-stryde-primary min-w-0"
+        />
+        <div className="flex items-center gap-1.5 flex-shrink-0">
+          <button
+            onClick={handleSaveEdit}
+            disabled={!editName.trim()}
+            className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-stryde-primary text-white hover:bg-stryde-primary-dark transition-colors disabled:opacity-50"
+          >
+            Save
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setEditName(habit.name);
+              setIsEditing(false);
+            }}
+            className="px-3 py-1.5 rounded-lg text-xs font-semibold border border-bento-border text-bento-muted hover:text-bento-text hover:bg-bento-border transition-colors"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <button
+    <div
       onClick={handleTap}
-      aria-label={isChecked ? `Mark ${habit.name} incomplete` : `Mark ${habit.name} complete`}
-      aria-pressed={isChecked}
       data-checked={isChecked}
       data-pressing={pressing}
-      className="w-full min-h-[72px] flex items-center gap-4 px-5 py-4 rounded-2xl border text-left transition-all bg-bento-card border-bento-border data-checked:opacity-65 data-pressing:scale-[0.97]"
+      className="group/card w-full min-h-[72px] flex items-center gap-4 px-5 py-4 rounded-2xl border text-left cursor-pointer transition-all bg-bento-card border-bento-border data-checked:opacity-65 data-pressing:scale-[0.97]"
     >
-      {/* Lucide CheckCircle2 for high-end look & consistency with HabitCard */}
       <div className="flex-shrink-0 transition-all">
         {isChecked ? (
           <CheckCircle2 className="w-8 h-8 text-green-500" />
@@ -64,9 +181,8 @@ export default function CheckInCard({ habit, userId, today, isChecked, onToggle,
       </div>
 
       <div className="flex-1 min-w-0">
-        {/* Adjusted Checked colors for premium look against Bento dark styling */}
         <p
-          className={`text-sm font-semibold transition-colors ${
+          className={`text-sm font-semibold transition-colors truncate ${
             isChecked ? "text-bento-muted line-through" : "text-bento-text"
           }`}
         >
@@ -77,11 +193,32 @@ export default function CheckInCard({ habit, userId, today, isChecked, onToggle,
         </p>
       </div>
 
+      {/* Action buttons (Edit & Delete) */}
+      <div className="flex items-center gap-1 opacity-0 group-hover/card:opacity-100 md:opacity-0 max-md:opacity-75 transition-opacity duration-150 mr-1 flex-shrink-0">
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            setIsEditing(true);
+          }}
+          className="p-1.5 rounded-lg text-bento-muted hover:text-stryde-primary hover:bg-bento-border transition-colors"
+          aria-label="Edit habit"
+        >
+          <Edit2 className="w-3.5 h-3.5" />
+        </button>
+        <button
+          onClick={handleDelete}
+          className="p-1.5 rounded-lg text-bento-muted hover:text-stryde-danger hover:bg-bento-border transition-colors"
+          aria-label="Delete habit"
+        >
+          <Trash2 className="w-3.5 h-3.5" />
+        </button>
+      </div>
+
       {!isChecked && (
-        <span className="text-xs flex-shrink-0 text-bento-muted">
+        <span className="text-xs flex-shrink-0 text-bento-muted group-hover/card:hidden">
           Tap to complete
         </span>
       )}
-    </button>
+    </div>
   );
 }

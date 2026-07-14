@@ -19,6 +19,11 @@ export default function SignInClient({authError}) {
   const [error, setError] = useState(authError || "");
 
   async function handleSubmit() {
+    if (!navigator.onLine) {
+      setError("You're offline. Connect to the internet.");
+      return;
+    }
+
     setLoading(true);
     setError("");
 
@@ -85,7 +90,7 @@ export default function SignInClient({authError}) {
 
         <FormError message={error} className="mt-0" />
 
-        <Button onClick={handleSubmit} disabled={loading} className="w-full py-4 rounded-xl text-sm">
+        <Button onClick={handleSubmit} disabled={loading || !email.trim() || !password.trim()} className="w-full py-4 rounded-xl text-sm">
           {loading ? "Signing in..." : "Sign In"}
         </Button>
 
