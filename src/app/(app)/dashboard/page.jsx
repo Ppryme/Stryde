@@ -68,9 +68,30 @@ export default async function DashboardHome() {
             <h2 className="text-base font-semibold text-bento-text">
               Active goals
             </h2>
-            <a href="/goals" className="text-xs text-stryde-primary">
-              See all
-            </a>
+            <div className="flex items-center gap-2">
+              <a
+                href="/goals/new"
+                className="flex items-center justify-center p-1 rounded-md text-bento-muted hover:text-stryde-primary hover:bg-bento-border transition-all"
+                aria-label="Create a goal"
+              >
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 4v16m8-8H4"
+                  />
+                </svg>
+              </a>
+              <a href="/goals" className="text-xs text-stryde-primary">
+                See all
+              </a>
+            </div>
           </div>
           <div className="flex flex-col gap-2">
             {goals.map((goal) => (

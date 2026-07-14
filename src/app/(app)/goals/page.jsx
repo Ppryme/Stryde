@@ -24,12 +24,12 @@ export default async function GoalsPage() {
     .eq("user_id", user.id)
     .order("created_at", { ascending: false });
 
-  // Split into active vs completed/other for better organization
+  // Split into active vs history (completed/almost-there/missed/archived)
   const activeGoals = (goals ?? []).filter((g) => g.status === "active");
-  const otherGoals  = (goals ?? []).filter((g) => g.status !== "active");
+  const historyGoals = (goals ?? []).filter((g) => ["completed", "almost-there", "missed", "archived"].includes(g.status));
 
   return (
-    <div className="px-4 pt-10 pb-6">
+    <div className="px-4 pt-10 pb-6 max-w-2xl mx-auto">
 
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
@@ -37,16 +37,14 @@ export default async function GoalsPage() {
           Goals
         </h1>
 
-        <div className="flex items-center justify-between justify-center gap-8">
-        <Link
-          href="/goals/new"
-          className="flex items-center gap-1.5 px-6 py-3 text-center rounded-full text-sm font-medium bg-stryde-primary text-white hover:bg-stryde-primary-dark transition-colors"
-        >
-          
-         Add
-        </Link>
-
-         <span><SignOutButton /></span> 
+        <div className="flex items-center gap-3">
+          <Link
+            href="/goals/new"
+            className="flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium bg-stryde-primary text-white hover:bg-stryde-primary-dark transition-colors"
+          >
+            Add
+          </Link>
+          <SignOutButton />
         </div>
         
       </div>
@@ -66,7 +64,7 @@ export default async function GoalsPage() {
           {activeGoals.length > 0 && (
             <section>
               <h2 className="text-xs font-semibold uppercase tracking-wider mb-3 text-bento-muted">
-                Active
+                Active Goals
               </h2>
               <div className="flex flex-col gap-2">
                 {activeGoals.map((goal) => (
@@ -76,14 +74,14 @@ export default async function GoalsPage() {
             </section>
           )}
 
-          {/* Other goals (completed/paused/abandoned) */}
-          {otherGoals.length > 0 && (
+          {/* Goal History */}
+          {historyGoals.length > 0 && (
             <section>
               <h2 className="text-xs font-semibold uppercase tracking-wider mb-3 text-bento-muted">
-                Other
+                Goal History
               </h2>
               <div className="flex flex-col gap-2">
-                {otherGoals.map((goal) => (
+                {historyGoals.map((goal) => (
                   <GoalCard key={goal.id} goal={goal} />
                 ))}
               </div>

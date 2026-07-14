@@ -67,6 +67,27 @@ export default function CheckInList({ habits, checkInMap, userId, today }) {
           );
         })}
       </div>
+
+      {/* Floating Add Habit Button */}
+      <a
+        href="/habits/new"
+        className="fixed bottom-20 right-6 z-40 flex items-center justify-center w-14 h-14 rounded-full bg-stryde-primary text-white shadow-lg shadow-stryde-primary/30 hover:scale-110 active:scale-95 hover:bg-stryde-primary-dark transition-all duration-200 cursor-pointer"
+        aria-label="Add habit"
+      >
+        <svg
+          className="w-6 h-6"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2.5}
+            d="M12 4v16m8-8H4"
+          />
+        </svg>
+      </a>
     </div>
   );
 }
