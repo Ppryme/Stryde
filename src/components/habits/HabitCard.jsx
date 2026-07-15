@@ -7,8 +7,9 @@ import { recalculateStreak } from "@/lib/streakUtils";
 import { HABIT_CATEGORIES } from "@/lib/design-token";
 import { CheckCircle2, Edit2, Trash2 } from "lucide-react";
 import useAppStore from "@/stores/useAppStore";
+import { getLocalDateString } from "@/lib/date";
 
-export default function HabitCard({ habit, userId, isChecked: initialChecked }) {
+export default function HabitCard({ habit, userId, isChecked: initialChecked, onMilestone }) {
   const [pressing, setPressing] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState(habit.name);
@@ -25,7 +26,8 @@ export default function HabitCard({ habit, userId, isChecked: initialChecked }) 
   const isChecked = todayCheckIns[habit.id] ?? initialChecked;
   const category = Object.values(HABIT_CATEGORIES).find((c) => c.id === habit.category);
   const dotColor = category?.color ?? "#888780";
-  const today = new Date().toISOString().split("T")[0];
+  // Use local date so users in non-UTC timezones don't get tomorrow's date
+  const today = getLocalDateString();
 
   async function handleToggle(e) {
     if (e) e.stopPropagation();
@@ -52,7 +54,7 @@ export default function HabitCard({ habit, userId, isChecked: initialChecked }) 
       });
     }
 
-    await recalculateStreak(habit.id, userId);
+    const newStreak = await recalculateStreak(habit.id, userId);
 
     if (navigator.onLine) {
       const supabase = getSupabase();
@@ -60,7 +62,16 @@ export default function HabitCard({ habit, userId, isChecked: initialChecked }) 
         { habit_id: habit.id, user_id: userId, date: today, completed: newValue },
         { onConflict: "habit_id,date" }
       );
+    } else {
+      await db.queue.add({
+        type: "UPSERT_CHECKIN",
+        payload: { habitId: habit.id, userId, date: today, completed: newValue },
+        createdAt: new Date().toISOString(),
+      });
     }
+
+    // Fire milestone callback if warranted
+    if (newValue && newStreak) onMilestone?.(newStreak);
   }
 
   async function handleSaveEdit(e) {

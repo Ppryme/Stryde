@@ -5,6 +5,7 @@ import BottomTabBar from "@/components/ui/BottomTabBar";
 import OfflineBanner from "@/components/ui/OfflineBanner";
 import GlobalLoadingOverlay from "@/components/ui/Reusable/GlobalLoadingOverlay";
 import UndoPopup from "@/components/ui/Reusable/UndoPopup";
+import MilestoneToast from "@/components/ui/Reusable/MilestoneToast";
 import ResetGlobalLoading from "./Reusable/ResetGlobalLoading";
 import useAppStore from "@/stores/useAppStore";
 import { syncQueue } from "@/lib/sync";
@@ -50,6 +51,7 @@ export default function AppShell({ children }) {
       <OfflineBanner />
       <GlobalLoadingOverlay />
       <UndoPopup />
+      <MilestoneToast />
 
       <main className="pb-16">
         {children}

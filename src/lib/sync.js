@@ -18,7 +18,7 @@ export async function syncQueue() {
             date:     item.payload.date,
             completed: item.payload.completed,
           },
-          { onConflict: 'habit_id, date' }
+          { onConflict: 'habit_id,date' }
         );
       }
 

@@ -1,21 +1,18 @@
 import { createClient } from "@/lib/supabase-server";
+import { redirect } from "next/navigation";
+import { getLocalDateString, getGreeting } from "@/lib/date";
 import DashboardClient from "@/components/dasboard/DashboardClient";
 import GoalCard from "@/components/goals/GoalCard";
 import SignOutButton from "@/components/ui/Reusable/SignOutButton";
-
-function getGreeting() {
-  const hour = new Date().getHours();
-  if (hour < 12) return "Good morning";
-  if (hour < 17) return "Good afternoon";
-  return "Good evening";
-}
 
 export default async function DashboardHome() {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  const today = new Date().toISOString().split("T")[0];
+  if (!user) redirect("/sign-in");
+
+  const today = getLocalDateString();
 
   const { data: habits } = await supabase
     .from("habits")

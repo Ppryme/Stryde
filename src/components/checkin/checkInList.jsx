@@ -4,10 +4,13 @@ import { useEffect } from "react";
 import useAppStore from "@/stores/useAppStore";
 import CheckInCard from "./CheckInCard";
 
+const MILESTONE_THRESHOLDS = new Set([7, 14, 21, 30, 60, 100, 200, 365]);
+
 export default function CheckInList({ habits, checkInMap, userId, today }) {
   const todayCheckIns = useAppStore((state) => state.todayCheckIns);
   const markCheckedIn = useAppStore((state) => state.markCheckedIn);
   const storeHabits = useAppStore((state) => state.habits);
+  const showMilestone = useAppStore((state) => state.showMilestone);
 
   // Initialize Zustand with current DB values on mount
   useEffect(() => {
@@ -33,6 +36,12 @@ export default function CheckInList({ habits, checkInMap, userId, today }) {
 
   function handleToggle(habitId, completed) {
     markCheckedIn(habitId, completed);
+  }
+
+  function handleMilestone(streak) {
+    if (MILESTONE_THRESHOLDS.has(streak)) {
+      showMilestone(streak);
+    }
   }
 
   return (
@@ -63,6 +72,7 @@ export default function CheckInList({ habits, checkInMap, userId, today }) {
               today={today}
               isChecked={isChecked}
               onToggle={handleToggle}
+              onMilestone={handleMilestone}
             />
           );
         })}

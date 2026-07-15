@@ -9,6 +9,7 @@ import FormLabel from "@/components/ui/FormLabel";
 import Input from "@/components/ui/Input";
 import useAppStore from "@/stores/useAppStore";
 import { Plus, Trash2 } from "lucide-react";
+import { getLocalDateString } from "@/lib/date";
 
 export default function GoalCreateForm({ userId }) {
   const router = useRouter();
@@ -20,6 +21,7 @@ export default function GoalCreateForm({ userId }) {
   const [reminders, setReminders] = useState(["08:00"]);
   const [targetDate, setTargetDate] = useState("");
   const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
 
   function addTask() {
     setTasks([...tasks, { id: `task-${Date.now()}-${Math.random()}`, name: "" }]);
@@ -52,6 +54,8 @@ export default function GoalCreateForm({ userId }) {
   }
 
   async function handleSave() {
+    if (saving) return;
+
     if (!title.trim()) {
       setError("Give your goal a title.");
       return;
@@ -68,55 +72,52 @@ export default function GoalCreateForm({ userId }) {
       return;
     }
 
-    // Verify target date is in the future
-    const todayStr = new Date().toISOString().split("T")[0];
+    const todayStr = getLocalDateString();
     if (targetDate <= todayStr) {
       setError("Target date must be in the future.");
       return;
     }
 
+    setSaving(true);
     showLoading("Saving goal...");
     setError("");
 
-    // Package tasks with unique IDs
-    const finalTasks = validTasks.map((t, idx) => ({
-      id: t.id.startsWith("init") ? `task-${Date.now()}-${idx}` : t.id,
-      name: t.name.trim(),
-    }));
+    try {
+      const finalTasks = validTasks.map((t, idx) => ({
+        id: t.id.startsWith("init") ? `task-${Date.now()}-${idx}` : t.id,
+        name: t.name.trim(),
+      }));
 
-    // Serialize details into description JSON payload
-    const goalPayload = JSON.stringify({
-      tasks: finalTasks,
-      reminders: reminders.filter((r) => r.trim() !== ""),
-      completion_history: {},
-      created_at_date: todayStr,
-      finished_date: null,
-    });
+      const goalPayload = JSON.stringify({
+        tasks: finalTasks,
+        reminders: reminders.filter((r) => r.trim() !== ""),
+        completion_history: {},
+        created_at_date: todayStr,
+        finished_date: null,
+      });
 
-    const supabase = getSupabase();
-    const { error: insertError } = await supabase.from("goals").insert({
-      user_id: userId,
-      title: title.trim(),
-      description: goalPayload,
-      target_date: targetDate,
-      progress_pct: 0,
-      status: "active",
-    });
+      const supabase = getSupabase();
+      const { error: insertError } = await supabase.from("goals").insert({
+        user_id: userId,
+        title: title.trim(),
+        description: goalPayload,
+        target_date: targetDate,
+        progress_pct: 0,
+        status: "active",
+      });
 
-    setSavingStatus(false);
-    hideLoading();
+      if (insertError) {
+        setError("Something went wrong saving the goal. Try again.");
+        console.error(insertError);
+        return;
+      }
 
-    if (insertError) {
-      setError("Something went wrong saving the goal. Try again.");
-      console.error(insertError);
-      return;
+      router.push("/goals");
+    } finally {
+      setSaving(false);
+      hideLoading();
     }
-
-    router.push("/goals");
   }
-
-  // Temporary function helper to prevent React errors
-  function setSavingStatus(val) {}
 
   return (
     <div className="flex flex-col gap-6 max-w-2xl mx-auto">
@@ -245,9 +246,10 @@ export default function GoalCreateForm({ userId }) {
       {/* Save Button */}
       <Button
         onClick={handleSave}
+        disabled={saving}
         className="w-full py-4 rounded-xl text-sm"
       >
-        Save Goal
+        {saving ? "Saving..." : "Save Goal"}
       </Button>
     </div>
   );

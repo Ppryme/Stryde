@@ -5,6 +5,7 @@
 // Returns the new currentStreak number
 // ─────────────────────────────────────────────
 import { db } from "./db";
+import { getLocalDateString } from "./date";
 
 export async function recalculateStreak(habitId, userId) {
   // Get all COMPLETED check-ins for this habit
@@ -27,8 +28,8 @@ export async function recalculateStreak(habitId, userId) {
     .map((c) => c.date)
     .sort((a, b) => new Date(b) - new Date(a));
 
-  const today     = new Date().toISOString().split("T")[0];
-  const yesterday = new Date(Date.now() - 86_400_000).toISOString().split("T")[0];
+  const today     = getLocalDateString();
+  const yesterday = getLocalDateString(new Date(Date.now() - 86_400_000));
 
   // If the last check-in wasn't today or yesterday, streak is broken
   if (dates[0] !== today && dates[0] !== yesterday) {

@@ -1,23 +1,17 @@
 import { createClient } from "@/lib/supabase-server";
 import { redirect } from "next/navigation";
+import { getLocalDateString, getGreeting } from "@/lib/date";
 import CheckInList from "@/components/checkin/checkInList";
 import SignOutButton from "@/components/ui/Reusable/SignOutButton";
 
 export const metadata = { title: "Check in" };
-
-function getGreeting() {
-  const hour = new Date().getHours();
-  if (hour < 12) return "Good morning";
-  if (hour < 17) return "Good afternoon";
-  return "Good evening";
-}
 
 export default async function CheckInPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/sign-in");
 
-  const today = new Date().toISOString().split("T")[0];
+  const today = getLocalDateString();
 
   const { data: habits } = await supabase
     .from("habits")

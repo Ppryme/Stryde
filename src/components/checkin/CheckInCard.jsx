@@ -6,6 +6,7 @@ import { getSupabase } from "@/lib/supabase";
 import { recalculateStreak } from "@/lib/streakUtils";
 import { CheckCircle2, Edit2, Trash2 } from "lucide-react";
 import useAppStore from "@/stores/useAppStore";
+import { getLocalDateString } from "@/lib/date";
 
 export default function CheckInCard({ habit, userId, today, isChecked, onToggle, onMilestone }) {
   const [pressing, setPressing] = useState(false);
@@ -21,13 +22,17 @@ export default function CheckInCard({ habit, userId, today, isChecked, onToggle,
 
   async function handleTap() {
     const newValue = !isChecked;
+    // Derive today on the client from the local clock — never trust the
+    // server-passed `today` prop for the write key, because the server runs
+    // in its own timezone which may differ from the user's device.
+    const clientToday = getLocalDateString();
 
     setPressing(true);
     onToggle(habit.id, newValue); // Triggers parent updates instantly
     setTimeout(() => setPressing(false), 150);
 
     const existing = await db.checkIns
-      .where({ habitId: habit.id, userId, date: today })
+      .where({ habitId: habit.id, userId, date: clientToday })
       .first();
 
     if (existing) {
@@ -36,7 +41,7 @@ export default function CheckInCard({ habit, userId, today, isChecked, onToggle,
       await db.checkIns.add({
         habitId: habit.id,
         userId,
-        date: today,
+        date: clientToday,
         completed: newValue,
         synced: false,
         createdAt: new Date().toISOString(),
@@ -49,9 +54,15 @@ export default function CheckInCard({ habit, userId, today, isChecked, onToggle,
     if (navigator.onLine) {
       const supabase = getSupabase();
       await supabase.from("check_ins").upsert(
-        { habit_id: habit.id, user_id: userId, date: today, completed: newValue },
+        { habit_id: habit.id, user_id: userId, date: clientToday, completed: newValue },
         { onConflict: "habit_id,date" }
       );
+    } else {
+      await db.queue.add({
+        type: "UPSERT_CHECKIN",
+        payload: { habitId: habit.id, userId, date: clientToday, completed: newValue },
+        createdAt: new Date().toISOString(),
+      });
     }
   }
 
