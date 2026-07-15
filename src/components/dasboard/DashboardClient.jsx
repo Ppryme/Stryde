@@ -57,7 +57,7 @@ export default function DashboardClient({ userId, initialHabits, initialCheckedI
       <section>
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-base font-semibold text-bento-text">
-            Today&apos;s habits
+            Daily habits
           </h2>
           <div className="flex items-center gap-2">
             <a
