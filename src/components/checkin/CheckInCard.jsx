@@ -31,38 +31,42 @@ export default function CheckInCard({ habit, userId, today, isChecked, onToggle,
     onToggle(habit.id, newValue); // Triggers parent updates instantly
     setTimeout(() => setPressing(false), 150);
 
-    const existing = await db.checkIns
-      .where({ habitId: habit.id, userId, date: clientToday })
-      .first();
+    try {
+      const existing = await db.checkIns
+        .where({ habitId: habit.id, userId, date: clientToday })
+        .first();
 
-    if (existing) {
-      await db.checkIns.update(existing.id, { completed: newValue, synced: false });
-    } else {
-      await db.checkIns.add({
-        habitId: habit.id,
-        userId,
-        date: clientToday,
-        completed: newValue,
-        synced: false,
-        createdAt: new Date().toISOString(),
-      });
-    }
+      if (existing) {
+        await db.checkIns.update(existing.id, { completed: newValue, synced: false });
+      } else {
+        await db.checkIns.add({
+          habitId: habit.id,
+          userId,
+          date: clientToday,
+          completed: newValue,
+          synced: false,
+          createdAt: new Date().toISOString(),
+        });
+      }
 
-    const newStreak = await recalculateStreak(habit.id, userId);
-    if (newValue && newStreak) onMilestone?.(newStreak);
+      const newStreak = await recalculateStreak(habit.id, userId);
+      if (newValue && newStreak) onMilestone?.(newStreak);
 
-    if (navigator.onLine) {
-      const supabase = getSupabase();
-      await supabase.from("check_ins").upsert(
-        { habit_id: habit.id, user_id: userId, date: clientToday, completed: newValue },
-        { onConflict: "habit_id,date" }
-      );
-    } else {
-      await db.queue.add({
-        type: "UPSERT_CHECKIN",
-        payload: { habitId: habit.id, userId, date: clientToday, completed: newValue },
-        createdAt: new Date().toISOString(),
-      });
+      if (navigator.onLine) {
+        const supabase = getSupabase();
+        await supabase.from("check_ins").upsert(
+          { habit_id: habit.id, user_id: userId, date: clientToday, completed: newValue },
+          { onConflict: "habit_id,date" }
+        );
+      } else {
+        await db.queue.add({
+          type: "UPSERT_CHECKIN",
+          payload: { habitId: habit.id, userId, date: clientToday, completed: newValue },
+          createdAt: new Date().toISOString(),
+        });
+      }
+    } catch (err) {
+      console.error("Failed to toggle check-in:", err);
     }
   }
 
@@ -73,29 +77,33 @@ export default function CheckInCard({ habit, userId, today, isChecked, onToggle,
     showLoading("Saving habit...");
     const updatedName = editName.trim();
 
-    // 1. Update IndexedDB
-    await db.habits.update(habit.id, { name: updatedName });
+    try {
+      // 1. Update IndexedDB
+      await db.habits.update(habit.id, { name: updatedName });
 
-    // 2. Update Zustand store
-    const updatedHabits = habits.map((h) =>
-      h.id === habit.id ? { ...h, name: updatedName } : h
-    );
-    setHabits(updatedHabits);
+      // 2. Update Zustand store
+      const updatedHabits = habits.map((h) =>
+        h.id === habit.id ? { ...h, name: updatedName } : h
+      );
+      setHabits(updatedHabits);
 
-    // 3. Sync online or queue
-    if (navigator.onLine) {
-      const supabase = getSupabase();
-      await supabase.from("habits").update({ name: updatedName }).eq("id", habit.id);
-    } else {
-      await db.queue.add({
-        type: "UPDATE_HABIT",
-        payload: { habitId: habit.id, name: updatedName },
-        createdAt: new Date().toISOString(),
-      });
+      // 3. Sync online or queue
+      if (navigator.onLine) {
+        const supabase = getSupabase();
+        await supabase.from("habits").update({ name: updatedName }).eq("id", habit.id);
+      } else {
+        await db.queue.add({
+          type: "UPDATE_HABIT",
+          payload: { habitId: habit.id, name: updatedName },
+          createdAt: new Date().toISOString(),
+        });
+      }
+      setIsEditing(false);
+    } catch (err) {
+      console.error("Failed to save habit edit:", err);
+    } finally {
+      hideLoading();
     }
-
-    hideLoading();
-    setIsEditing(false);
   }
 
   async function handleDelete(e) {
@@ -116,18 +124,22 @@ export default function CheckInCard({ habit, userId, today, isChecked, onToggle,
         setHabits(originalHabits);
       },
       async () => {
-        // Dismiss: Permanently delete/archive
-        await db.habits.update(habitId, { archived: true });
+        try {
+          // Dismiss: Permanently delete/archive
+          await db.habits.update(habitId, { archived: true });
 
-        if (navigator.onLine) {
-          const supabase = getSupabase();
-          await supabase.from("habits").update({ archived: true }).eq("id", habitId);
-        } else {
-          await db.queue.add({
-            type: "ARCHIVE_HABIT",
-            payload: { habitId },
-            createdAt: new Date().toISOString(),
-          });
+          if (navigator.onLine) {
+            const supabase = getSupabase();
+            await supabase.from("habits").update({ archived: true }).eq("id", habitId);
+          } else {
+            await db.queue.add({
+              type: "ARCHIVE_HABIT",
+              payload: { habitId },
+              createdAt: new Date().toISOString(),
+            });
+          }
+        } catch (err) {
+          console.error("Failed to delete habit:", err);
         }
       }
     );

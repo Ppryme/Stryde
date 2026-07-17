@@ -14,16 +14,12 @@ import {
   getDaysDifference,
 } from "@/lib/goalUtils";
 import {
-  CheckSquare,
-  Square,
   ChevronDown,
   ChevronUp,
   Calendar,
   Flame,
   TrendingUp,
   CheckCircle2,
-  AlertCircle,
-  XCircle,
   RotateCcw,
   Archive,
   ArrowRight,
@@ -70,14 +66,18 @@ export default function GoalCard({ goal }) {
   useEffect(() => {
     async function evaluateStatus() {
       if (goal.status !== "active") return;
-      const evaluated = evaluateGoalStatus(goal);
-      if (evaluated !== goal.status) {
-        const supabase = getSupabase();
-        await supabase
-          .from("goals")
-          .update({ status: evaluated })
-          .eq("id", goal.id);
-        router.refresh();
+      try {
+        const evaluated = evaluateGoalStatus(goal);
+        if (evaluated !== goal.status) {
+          const supabase = getSupabase();
+          await supabase
+            .from("goals")
+            .update({ status: evaluated })
+            .eq("id", goal.id);
+          router.refresh();
+        }
+      } catch (err) {
+        console.error("Failed to auto-evaluate goal status:", err);
       }
     }
     evaluateStatus();
@@ -120,16 +120,20 @@ export default function GoalCard({ goal }) {
       finished_date: null,
     });
 
-    const supabase = getSupabase();
-    await supabase
-      .from("goals")
-      .update({
-        description: newDescription,
-        progress_pct: newProgress,
-      })
-      .eq("id", goal.id);
+    try {
+      const supabase = getSupabase();
+      await supabase
+        .from("goals")
+        .update({
+          description: newDescription,
+          progress_pct: newProgress,
+        })
+        .eq("id", goal.id);
 
-    router.refresh();
+      router.refresh();
+    } catch (err) {
+      console.error("Failed to toggle goal task:", err);
+    }
   }
 
   async function handleSaveExtension() {
@@ -142,21 +146,27 @@ export default function GoalCard({ goal }) {
     showLoading("Updating goal deadline...");
     setError("");
 
-    const supabase = getSupabase();
-    const { error: err } = await supabase
-      .from("goals")
-      .update({
-        target_date: newTargetDate,
-        status: "active",
-      })
-      .eq("id", goal.id);
+    try {
+      const supabase = getSupabase();
+      const { error: err } = await supabase
+        .from("goals")
+        .update({
+          target_date: newTargetDate,
+          status: "active",
+        })
+        .eq("id", goal.id);
 
-    hideLoading();
-    if (err) {
-      setError("Failed to extend deadline.");
-    } else {
-      setExtending(false);
-      router.refresh();
+      if (err) {
+        setError("Failed to extend deadline.");
+      } else {
+        setExtending(false);
+        router.refresh();
+      }
+    } catch (err) {
+      console.error("Error extending target date:", err);
+      setError("An unexpected error occurred.");
+    } finally {
+      hideLoading();
     }
   }
 
@@ -174,32 +184,41 @@ export default function GoalCard({ goal }) {
       finished_date: null,
     });
 
-    const supabase = getSupabase();
-    await supabase
-      .from("goals")
-      .update({
-        description: newDescription,
-        progress_pct: 0,
-        status: "active",
+    try {
+      const supabase = getSupabase();
+      await supabase
+        .from("goals")
+        .update({
+          description: newDescription,
+          progress_pct: 0,
+          status: "active",
       })
       .eq("id", goal.id);
 
-    hideLoading();
-    router.refresh();
+      router.refresh();
+    } catch (err) {
+      console.error("Failed to restart goal:", err);
+    } finally {
+      hideLoading();
+    }
   }
 
   async function handleArchive() {
     if (!confirm("Archive this goal? It will be moved to history and will no longer show as active.")) return;
 
-    showLoading("Archiving goal...");
-    const supabase = getSupabase();
-    await supabase
-      .from("goals")
-      .update({ status: "archived" })
-      .eq("id", goal.id);
+    try {
+      const supabase = getSupabase();
+      await supabase
+        .from("goals")
+        .update({ status: "archived" })
+        .eq("id", goal.id);
 
-    hideLoading();
-    router.refresh();
+      router.refresh();
+    } catch (err) {
+      console.error("Failed to archive goal:", err);
+    } finally {
+      hideLoading();
+    }
   }
 
   const variant = STATUS_VARIANT[goal.status] ?? "info";

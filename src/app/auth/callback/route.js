@@ -17,20 +17,12 @@ export async function GET(request) {
     const { error } =
       await supabase.auth.exchangeCodeForSession(code);
 
-       console.log("EXCHANGE ERROR:", error);
-
     if (!error) {
       const {
         data: { user },
       } = await supabase.auth.getUser();
 
-        console.log("CALLBACK USER:", user);
-
       if (user?.user_metadata?.onboarded) {
-        console.log(
-          "REDIRECT TARGET:",
-          user?.user_metadata?.onboarded ? "/" : "/onboarding"
-        );
         return NextResponse.redirect(`${origin}/`);
         
       }

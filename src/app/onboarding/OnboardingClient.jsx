@@ -3,107 +3,174 @@
 import Image from "next/image";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { motion, AnimatePresence } from "framer-motion";
 import Button from "@/components/ui/button";
 import FormError from "@/components/ui/FormError";
 import Input from "@/components/ui/Input";
 import { getSupabase } from "@/lib/supabase";
 import { HABIT_CATEGORIES } from "@/lib/design-token";
-import strydeImage from "@/assets/images/stryde-logo .png";
 import useAppStore from "@/stores/useAppStore";
+import { Plus, Trash2, ChevronRight, ChevronLeft } from "lucide-react";
 
-const STEPS = ["welcome", "goal", "habit"];
+// Import all mockup images
+import dashboardMockup from "@/assets/images/dashboard-mockup.png";
+import checkinMockup from "@/assets/images/checkin-page.png";
+import goalsMockup from "@/assets/images/goals-mockup.png";
+import analyticsMockup from "@/assets/images/analytics-mockup.png";
+
+const SLIDES = [
+  {
+    title: "Track Your Progress",
+    description: "Build habits every day and watch your consistency grow.",
+    image: dashboardMockup,
+  },
+  {
+    title: "Daily Check-ins",
+    description: "One tap every day keeps your streak alive.",
+    image: checkinMockup,
+  },
+  {
+    title: "Goals",
+    description: "Break big goals into small daily tasks.",
+    image: goalsMockup,
+  },
+  {
+    title: "Analytics",
+    description: "Stay motivated with visual progress and streaks.",
+    image: analyticsMockup,
+  },
+];
 
 export default function OnboardingClient() {
   const router = useRouter();
-  const [step, setStep] = useState(0);
+  const [step, setStep] = useState(0); // 0-3: Slides, 4: Habit builder
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("");
-  const [habitName, setHabitName] = useState("");
-  const [frequency, setFrequency] = useState("daily");
+  
+  // Initialize with 2 default habits to guide the user
+  const [habitsList, setHabitsList] = useState([
+    { id: "h-0", name: "Read 10 pages", category: "learning", frequency: "daily" },
+    { id: "h-1", name: "Morning stretch", category: "fitness", frequency: "daily" },
+  ]);
 
   const showLoading = useAppStore((state) => state.showLoading);
   const hideLoading = useAppStore((state) => state.hideLoading);
 
+  function addHabitInput() {
+    setError("");
+    const newId = `h-${Date.now()}-${Math.random()}`;
+    setHabitsList([
+      ...habitsList,
+      { id: newId, name: "", category: "learning", frequency: "daily" },
+    ]);
+  }
+
+  function removeHabitInput(id) {
+    if (habitsList.length <= 1) {
+      setError("Please keep at least one habit to get started.");
+      return;
+    }
+    setHabitsList(habitsList.filter((h) => h.id !== id));
+    setError("");
+  }
+
+  function updateHabitField(id, field, value) {
+    setHabitsList(
+      habitsList.map((h) => (h.id === id ? { ...h, [field]: value } : h))
+    );
+    setError("");
+  }
+
   async function handleFinish() {
-    const supabase = getSupabase();
-    if (!habitName.trim()) {
-      setError("Give your habit a name.");
+    const validHabits = habitsList.filter((h) => h.name.trim() !== "");
+    if (validHabits.length === 0) {
+      setError("Please enter a name for at least one habit.");
       return;
     }
 
     setLoading(true);
-    showLoading("Creating your first habit and completing onboarding...");
+    showLoading("Creating your habits and completing onboarding...");
+    setError("");
 
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
+    try {
+      const supabase = getSupabase();
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
 
-    if (userError || !user) {
-      setError("No authenticated user found.");
-      setLoading(false);
-      return;
-    }
+      if (userError || !user) {
+        setError("No authenticated user found.");
+        setLoading(false);
+        hideLoading();
+        return;
+      }
 
-    await supabase.from("habits").insert({
-      user_id: user.id,
-      name: habitName,
-      frequency,
-      category: selectedCategory || "other",
-      color_tag:
-        HABIT_CATEGORIES[selectedCategory?.toUpperCase()]?.color ?? "#888780",
-      order_index: 0,
-    });
+      // Prepare multi-habit bulk insert payload
+      const habitsToInsert = validHabits.map((h, idx) => ({
+        user_id: user.id,
+        name: h.name.trim(),
+        frequency: h.frequency,
+        category: h.category || "other",
+        color_tag:
+          HABIT_CATEGORIES[h.category?.toUpperCase()]?.color ?? "#888780",
+        order_index: idx,
+      }));
 
-    const { error: updateError } = await supabase.auth.updateUser({
-      data: {
-        onboarded: true,
-        name: user.user_metadata?.name ?? user.user_metadata?.full_name,
-      },
-    });
+      const { error: insertError } = await supabase.from("habits").insert(habitsToInsert);
+      if (insertError) {
+        setError("Failed to create habits. Please try again.");
+        console.error("Bulk insert error:", insertError);
+        setLoading(false);
+        hideLoading();
+        return;
+      }
 
-    if (updateError) {
-      setError(updateError.message);
+      // Update user onboarded state in Auth metadata
+      const { error: updateError } = await supabase.auth.updateUser({
+        data: {
+          onboarded: true,
+          name: user.user_metadata?.name ?? user.user_metadata?.full_name,
+        },
+      });
+
+      if (updateError) {
+        setError(updateError.message);
+        setLoading(false);
+        hideLoading();
+        return;
+      }
+
+      router.push("/");
+    } catch (err) {
+      console.error("Onboarding submission failed:", err);
+      setError("An unexpected error occurred. Please try again.");
+    } finally {
       setLoading(false);
       hideLoading();
-      return;
     }
-
-    setLoading(false);
-    hideLoading();
-    router.push("/");
   }
 
+  const currentSlide = SLIDES[step];
+
   return (
-    <div className="min-h-dvh flex flex-col px-5 py-6 sm:px-8 sm:py-10 lg:max-w-5xl mx-auto">
-      <div className="relative flex items-center justify-center mb-8 sm:mb-10 w-full min-h-[40px]">
+    <div className="min-h-dvh flex flex-col px-4 py-6 sm:px-6 sm:py-10 max-w-xl mx-auto justify-between bg-bento-bg">
+      {/* Progress indicators & back arrow */}
+      <div className="relative flex items-center justify-center mb-6 w-full min-h-[40px]">
         {step > 0 && (
           <button
             onClick={() => {
               setError("");
               setStep((prev) => prev - 1);
             }}
-            className="absolute left-0 p-2 text-bento-muted hover:text-bento-text transition-colors rounded-lg hover:bg-bento-card border border-transparent hover:border-bento-border flex items-center justify-center"
-            aria-label="Go back to previous step"
+            className="absolute left-0 p-2 text-bento-muted hover:text-bento-text transition-colors rounded-xl hover:bg-bento-card border border-bento-border flex items-center justify-center"
+            aria-label="Go back"
           >
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M10 19l-7-7m0 0l7-7m-7 7h18"
-              />
-            </svg>
+            <ChevronLeft className="w-5 h-5" />
           </button>
         )}
         <div className="flex gap-2">
-          {STEPS.map((_, i) => (
+          {[0, 1, 2, 3, 4].map((i) => (
             <div
               key={i}
               className={`h-1.5 rounded-full transition-all duration-300 ${
@@ -114,132 +181,195 @@ export default function OnboardingClient() {
         </div>
       </div>
 
-      {step === 0 && (
-        <section className="flex flex-1 flex-col items-center text-center">
-          <div className="w-full max-w-2xl mx-auto">
-            <p className="text-sm sm:text-base font-semibold text-bento-muted">
-              Let&apos;s get started
-            </p>
-            <h1 className="mt-3 text-3xl sm:text-4xl lg:text-5xl font-black leading-tight text-bento-text">
-             Boost Productivity and Build Lasting Habits with Stryde
-            </h1>
-          </div>
+      {/* Main Container */}
+      <div className="flex-1 flex flex-col justify-center">
+        <AnimatePresence mode="wait">
+          {step < 4 ? (
+            <motion.div
+              key={`slide-${step}`}
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.3 }}
+              className="flex flex-col items-center text-center w-full"
+            >
+              <h2 className="text-2xl sm:text-3xl font-black text-bento-text tracking-tight mb-2">
+                {currentSlide.title}
+              </h2>
+              <p className="text-sm sm:text-base text-bento-muted max-w-sm mb-6 leading-relaxed">
+                {currentSlide.description}
+              </p>
 
-          <div className="flex flex-1 items-center justify-center w-full py-8 sm:py-10">
-            <Image
-              src={strydeImage}
-              alt="Stryde"
-              priority
-              className="w-full max-w-[280px] sm:max-w-[380px] lg:max-w-[460px] h-auto object-contain"
-            />
-          </div>
+              {/* Phone Mockup Frame */}
+              <div className="relative w-full flex items-center justify-center py-4 my-2">
+                {/* Purple radial glow */}
+                <div className="absolute w-[240px] h-[240px] sm:w-[280px] sm:h-[280px] rounded-full bg-gradient-to-tr from-stryde-primary/30 to-transparent blur-3xl opacity-70 pointer-events-none" />
 
-          <Button
-            onClick={() => setStep(1)}
-            className="w-full max-w-md py-4 text-sm sm:text-base mt-auto"
-          >
-             Get started
-          </Button>
-        </section>
-      )}
+                {/* Styled device card */}
+                <motion.div
+                  animate={{ y: [0, -8, 0] }}
+                  transition={{ repeat: Infinity, duration: 4.5, ease: "easeInOut" }}
+                  className="relative z-10 w-[210px] sm:w-[245px] aspect-[9/18.5] rounded-[36px] border-[6px] border-bento-border bg-bento-card shadow-[0_20px_50px_rgba(83,74,183,0.25),_0_15px_30px_rgba(0,0,0,0.8)] overflow-hidden flex items-center justify-center"
+                >
+                  <Image
+                    src={currentSlide.image}
+                    alt={currentSlide.title}
+                    priority
+                    className="w-full h-full object-cover"
+                  />
+                </motion.div>
+              </div>
+            </motion.div>
+          ) : (
+            <motion.div
+              key="habit-builder"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.3 }}
+              className="flex flex-col gap-5 w-full text-left"
+            >
+              <div>
+                <h2 className="text-2xl font-bold text-bento-text">
+                  Set up your routine.
+                </h2>
+                <p className="text-sm text-bento-muted mt-1 leading-relaxed">
+                  Stryde works best when you start with 2-3 simple daily habits.
+                </p>
+              </div>
 
-      {step === 1 && (
-        <div className="flex flex-1 flex-col gap-6 w-full max-w-2xl mx-auto">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-bento-text">
-              What do you want to work on?
-            </h1>
-            <p className="text-sm mt-1 text-bento-muted">
-              Pick one area to start. You can always add more.
-            </p>
-          </div>
+              {/* Habits list builder container */}
+              <div className="flex flex-col gap-4 max-h-[50vh] overflow-y-auto pr-1 scrollbar-thin">
+                {habitsList.map((habit, idx) => (
+                  <div
+                    key={habit.id}
+                    className="p-4 rounded-2xl bg-bento-card border border-bento-border flex flex-col gap-3 relative transition-all"
+                  >
+                    {/* Header line with Trash */}
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] uppercase font-bold tracking-wider text-bento-muted">
+                        Habit #{idx + 1}
+                      </span>
+                      {habitsList.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removeHabitInput(habit.id)}
+                          className="p-1 rounded-lg text-bento-muted hover:text-stryde-danger hover:bg-bento-bg transition-colors"
+                          aria-label="Delete habit"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
 
-          <div className="grid grid-cols-1 min-[380px]:grid-cols-2 gap-3">
-            {Object.values(HABIT_CATEGORIES).map((cat) => (
+                    {/* Habit Name input */}
+                    <Input
+                      type="text"
+                      placeholder="e.g. Read 15 pages, Drink water, Gym..."
+                      value={habit.name}
+                      onChange={(e) =>
+                        updateHabitField(habit.id, "name", e.target.value)
+                      }
+                      className="py-2.5 px-3.5 text-sm"
+                    />
+
+                    {/* Horizontal Category Selector */}
+                    <div className="flex flex-col gap-1.5">
+                      <span className="text-[10px] font-semibold text-bento-muted uppercase tracking-wider">
+                        Category
+                      </span>
+                      <div className="flex gap-1.5 overflow-x-auto pb-1.5 scrollbar-none">
+                        {Object.values(HABIT_CATEGORIES).map((cat) => {
+                          const isSelected = habit.category === cat.id;
+                          return (
+                            <button
+                              key={cat.id}
+                              type="button"
+                              onClick={() =>
+                                updateHabitField(habit.id, "category", cat.id)
+                              }
+                              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full border text-[11px] font-medium whitespace-nowrap transition-all"
+                              style={{
+                                borderColor: isSelected ? cat.color : "var(--color-bento-border)",
+                                backgroundColor: isSelected ? `${cat.color}15` : "transparent",
+                                color: isSelected ? "var(--color-bento-text)" : "var(--color-bento-muted)",
+                              }}
+                            >
+                              <div
+                                className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                                style={{ background: cat.color }}
+                              />
+                              {cat.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Frequency selector */}
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-semibold text-bento-muted uppercase tracking-wider mr-2">
+                        Frequency
+                      </span>
+                      <div className="flex rounded-lg bg-bento-bg border border-bento-border p-0.5">
+                        {["daily", "weekly"].map((f) => (
+                          <button
+                            key={f}
+                            type="button"
+                            onClick={() =>
+                              updateHabitField(habit.id, "frequency", f)
+                            }
+                            className={`px-3 py-1 rounded-md text-[11px] font-semibold capitalize transition-all ${
+                              habit.frequency === f
+                                ? "bg-stryde-primary text-white"
+                                : "text-bento-muted hover:text-bento-text"
+                            }`}
+                          >
+                            {f}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Add another habit button */}
               <button
-                key={cat.id}
-                onClick={() => setSelectedCategory(cat.id)}
-                className="flex flex-col items-start gap-2 p-4 rounded-xl border transition-all bg-bento-card border-bento-border text-bento-text"
-                style={{
-                  ...(selectedCategory === cat.id
-                    ? { background: cat.color + "22", borderColor: cat.color }
-                    : {}),
-                }}
+                type="button"
+                onClick={addHabitInput}
+                className="flex items-center justify-center gap-2 py-3 border border-dashed border-bento-border rounded-2xl text-xs font-semibold text-bento-muted hover:text-stryde-primary hover:border-stryde-primary transition-all bg-transparent w-full"
               >
-                <div
-                  className="w-2.5 h-2.5 rounded-full"
-                  style={{ background: cat.color }}
-                />
-                <span className="text-sm font-medium">{cat.label}</span>
+                <Plus className="w-4 h-4" />
+                Add another habit
               </button>
-            ))}
-          </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
 
-          <FormError message={error} className="mt-0" />
-
+      {/* Button Controls */}
+      <div className="mt-8 flex flex-col gap-3 w-full">
+        <FormError message={error} className="mt-0 text-center" />
+        
+        {step < 4 ? (
           <Button
-            onClick={() => {
-              if (!selectedCategory) {
-                setError("Select a category");
-                return;
-              }
-
-              setError("");
-              setStep(2);
-            }}
-            className="w-full py-4 text-sm mt-auto"
+            onClick={() => setStep((prev) => prev + 1)}
+            className="w-full py-4 text-sm font-semibold flex items-center justify-center gap-1.5"
           >
-            Continue &rarr;
+            Continue
+            <ChevronRight className="w-4 h-4" />
           </Button>
-        </div>
-      )}
-
-      {step === 2 && (
-        <div className="flex flex-1 flex-col gap-6 w-full max-w-2xl mx-auto">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-bento-text">
-              Name your first habit.
-            </h1>
-            <p className="text-sm mt-1 text-bento-muted">
-              Start small. The habit you&apos;ll actually do beats the perfect
-              one you won&apos;t.
-            </p>
-          </div>
-
-          <Input
-            type="text"
-            placeholder="e.g. Morning run, Read 20 pages..."
-            value={habitName}
-            onChange={(e) => setHabitName(e.target.value)}
-          />
-
-          <div className="flex gap-3">
-            {["daily", "weekly"].map((f) => (
-              <button
-                key={f}
-                onClick={() => setFrequency(f)}
-                className={`flex-1 py-3 rounded-xl text-sm font-medium capitalize border transition-all ${
-                  frequency === f
-                    ? "bg-stryde-primary-light border-stryde-primary text-stryde-primary-dark"
-                    : "bg-transparent border-bento-border text-bento-muted"
-                }`}
-              >
-                {f}
-              </button>
-            ))}
-          </div>
-
-          <FormError message={error} className="mt-0" />
-
+        ) : (
           <Button
             onClick={handleFinish}
             disabled={loading}
-            className="w-full py-4 text-sm mt-auto"
+            className="w-full py-4 text-sm font-semibold"
           >
-            {loading ? "Saving..." : <>Start tracking &rarr;</>}
+            {loading ? "Starting..." : "Start tracking \u2192"}
           </Button>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }
