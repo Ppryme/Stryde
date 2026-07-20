@@ -14,7 +14,7 @@ import { Plus, Trash2, ChevronRight, ChevronLeft } from "lucide-react";
 
 // Import all mockup images
 import dashboardMockup from "@/assets/images/dashboard-mockup.png";
-import checkinMockup from "@/assets/images/checkin-page.png";
+import checkinMockup from "@/assets/images/checkin-mockup.png";
 import goalsMockup from "@/assets/images/goals-mockup.png";
 import analyticsMockup from "@/assets/images/analytics-mockup.png";
 
