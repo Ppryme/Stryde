@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, memo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { getSupabase } from "@/lib/supabase";
 import Badge from "@/components/ui/badge";
@@ -8,8 +8,6 @@ import useAppStore from "@/stores/useAppStore";
 import {
   parseGoal,
   getStreak,
-  calculateProgress,
-  calculateSuccessRate,
   evaluateGoalStatus,
   getDaysDifference,
 } from "@/lib/goalUtils";
@@ -18,11 +16,11 @@ import {
   ChevronUp,
   Calendar,
   Flame,
-  TrendingUp,
   CheckCircle2,
   RotateCcw,
   Archive,
   ArrowRight,
+  Trash2,
 } from "lucide-react";
 
 const STATUS_VARIANT = {
@@ -41,7 +39,7 @@ const STATUS_LABEL = {
   archived: "Archived",
 };
 
-export default function GoalCard({ goal }) {
+function GoalCard({ goal }) {
   const router = useRouter();
   const showLoading = useAppStore((state) => state.showLoading);
   const hideLoading = useAppStore((state) => state.hideLoading);
@@ -54,13 +52,19 @@ export default function GoalCard({ goal }) {
   const todayStr = new Date().toISOString().split("T")[0];
   const { tasks, completionHistory, createdAtDate } = parseGoal(goal);
 
-  const todayCompletions = completionHistory[todayStr] ?? [];
+  // Local state for optimistic updates
+  const [localHistory, setLocalHistory] = useState(completionHistory);
+
+  useEffect(() => {
+    setLocalHistory(completionHistory);
+  }, [completionHistory]);
+
+  const todayCompletions = localHistory[todayStr] ?? [];
   const completedTodayCount = todayCompletions.length;
   const totalTasksCount = tasks.length;
 
   const daysRemaining = Math.max(0, getDaysDifference(todayStr, goal.target_date));
-  const successRate = calculateSuccessRate(goal);
-  const streak = getStreak(completionHistory, totalTasksCount, createdAtDate);
+  const streak = getStreak(localHistory, totalTasksCount, createdAtDate);
 
   // Auto-evaluation hook
   useEffect(() => {
@@ -83,7 +87,7 @@ export default function GoalCard({ goal }) {
     evaluateStatus();
   }, [goal, router]);
 
-  async function toggleTask(taskId, e) {
+  const toggleTask = useCallback(async (taskId, e) => {
     if (e) e.stopPropagation();
 
     let newDayCompletions = [];
@@ -94,11 +98,13 @@ export default function GoalCard({ goal }) {
     }
 
     const newHistory = {
-      ...completionHistory,
+      ...localHistory,
       [todayStr]: newDayCompletions,
     };
 
-    // Calculate new progress pct
+    // Optimistically update the UI instantly
+    setLocalHistory(newHistory);
+
     const tasksPerDay = tasks.length;
     const totalDays = Math.max(1, getDaysDifference(createdAtDate, goal.target_date));
     const maxCompletions = totalDays * tasksPerDay;
@@ -133,10 +139,37 @@ export default function GoalCard({ goal }) {
       router.refresh();
     } catch (err) {
       console.error("Failed to toggle goal task:", err);
+      // Revert on error
+      setLocalHistory(completionHistory);
     }
-  }
+  }, [todayCompletions, localHistory, todayStr, tasks, createdAtDate, goal, router, completionHistory]);
 
-  async function handleSaveExtension() {
+  const handleDelete = useCallback(async (e) => {
+    if (e) e.stopPropagation();
+    if (!confirm("Are you sure you want to delete this goal? This cannot be undone.")) return;
+
+    showLoading("Deleting goal...");
+    try {
+      const supabase = getSupabase();
+      const { error: err } = await supabase
+        .from("goals")
+        .delete()
+        .eq("id", goal.id);
+
+      if (err) {
+        alert("Failed to delete goal. Try again.");
+        console.error(err);
+      } else {
+        router.refresh();
+      }
+    } catch (err) {
+      console.error("Failed to delete goal:", err);
+    } finally {
+      hideLoading();
+    }
+  }, [goal.id, router, showLoading, hideLoading]);
+
+  const handleSaveExtension = useCallback(async () => {
     if (!newTargetDate) return;
     if (newTargetDate <= todayStr) {
       setError("New target date must be in the future.");
@@ -168,9 +201,9 @@ export default function GoalCard({ goal }) {
     } finally {
       hideLoading();
     }
-  }
+  }, [newTargetDate, todayStr, goal.id, router, showLoading, hideLoading]);
 
-  async function handleRestart() {
+  const handleRestart = useCallback(async () => {
     if (!confirm("Are you sure you want to restart this goal? This will reset all statistics and task completion history.")) return;
 
     showLoading("Restarting goal...");
@@ -192,8 +225,8 @@ export default function GoalCard({ goal }) {
           description: newDescription,
           progress_pct: 0,
           status: "active",
-      })
-      .eq("id", goal.id);
+        })
+        .eq("id", goal.id);
 
       router.refresh();
     } catch (err) {
@@ -201,9 +234,9 @@ export default function GoalCard({ goal }) {
     } finally {
       hideLoading();
     }
-  }
+  }, [goal, todayStr, router, showLoading, hideLoading]);
 
-  async function handleArchive() {
+  const handleArchive = useCallback(async () => {
     if (!confirm("Archive this goal? It will be moved to history and will no longer show as active.")) return;
 
     try {
@@ -219,7 +252,7 @@ export default function GoalCard({ goal }) {
     } finally {
       hideLoading();
     }
-  }
+  }, [goal.id, router, hideLoading]);
 
   const variant = STATUS_VARIANT[goal.status] ?? "info";
   const label = STATUS_LABEL[goal.status] ?? goal.status;
@@ -247,10 +280,17 @@ export default function GoalCard({ goal }) {
           )}
         </div>
 
-        <div className="flex items-center gap-1.5 flex-shrink-0">
+        <div className="flex items-center gap-2 flex-shrink-0">
           <Badge variant={variant} className="capitalize">
             {label}
           </Badge>
+          <button
+            onClick={handleDelete}
+            className="p-1.5 rounded-lg text-bento-muted hover:text-stryde-danger hover:bg-bento-border transition-colors cursor-pointer"
+            aria-label="Delete goal"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
           {goal.status === "active" && (
             <span className="text-bento-muted">
               {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
@@ -277,21 +317,14 @@ export default function GoalCard({ goal }) {
         </div>
       </div>
 
-      {/* Daily Metrics (Streak + Success Rate) */}
+      {/* Daily Metrics (Streak Only, Success Rate Removed) */}
       {goal.status === "active" && (
-        <div className="grid grid-cols-2 gap-3 mt-3 pt-3 border-t border-bento-border/30 text-xs">
+        <div className="flex items-center justify-between mt-3 pt-3 border-t border-bento-border/30 text-xs">
           <div className="flex items-center gap-1.5 text-bento-text">
             <Flame className="w-4 h-4 text-stryde-fire" />
             <div>
               <p className="text-[10px] text-bento-muted">Current Streak</p>
               <p className="font-bold">{streak} {streak === 1 ? "day" : "days"}</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-1.5 text-bento-text">
-            <TrendingUp className="w-4 h-4 text-stryde-success" />
-            <div>
-              <p className="text-[10px] text-bento-muted">Daily Success Rate</p>
-              <p className="font-bold">{successRate}%</p>
             </div>
           </div>
         </div>
@@ -343,6 +376,15 @@ export default function GoalCard({ goal }) {
         </div>
       )}
 
+      {/* Show more/less toggle text at the bottom */}
+      {goal.status === "active" && (
+        <div className="flex justify-center mt-2 pt-2 border-t border-bento-border/30">
+          <span className="text-xs font-semibold text-stryde-primary flex items-center gap-1 hover:underline cursor-pointer">
+            {expanded ? "Show less" : "Show more"}
+          </span>
+        </div>
+      )}
+
       {/* Remediation actions */}
       {goal.status === "almost-there" && (
         <div
@@ -364,6 +406,7 @@ export default function GoalCard({ goal }) {
         </div>
       )}
 
+      {/* Missed goals remediation actions */}
       {goal.status === "missed" && (
         <div
           onClick={(e) => e.stopPropagation()}
@@ -381,7 +424,7 @@ export default function GoalCard({ goal }) {
               </button>
               <button
                 onClick={handleRestart}
-                className="flex flex-col items-center gap-1 py-2 rounded-xl border border-bento-border text-[10px] font-semibold text-bento-text hover:bg-bento-bg transition-all"
+                className="flex flex-col items-center gap-1 py-2 rounded-xl border border-bento-border text-[10px] font-semibold text-bento-text hover:bg-bento-bg transition-all animate-none"
               >
                 <RotateCcw className="w-4 h-4 text-stryde-success" />
                 Restart
@@ -440,3 +483,5 @@ export default function GoalCard({ goal }) {
     );
   }
 }
+
+export default memo(GoalCard);

@@ -5,7 +5,7 @@ import HeatmapCalendar from "@/components/analytics/HeatmapCalendar";
 import TrendChart from "@/components/analytics/TrendChart";
 import { getOneYearAgoDate } from "@/lib/date";
 import SignOutButton from "@/components/ui/Reusable/SignOutButton";
-
+import AnalyticsPageTracker from "@/components/analytics/AnalyticsPageTracker";
 
 export const metadata = { title: "Analytics" };
 
@@ -38,6 +38,7 @@ export default async function AnalyticsPage() {
 
   return (
     <div className="px-4 pt-10 pb-6 flex flex-col gap-6">
+      <AnalyticsPageTracker />
 
       <div className="flex items-center justify-between">
        <h1 className="text-2xl font-bold text-bento-text">

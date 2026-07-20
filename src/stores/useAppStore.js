@@ -56,6 +56,21 @@ const useAppStore = create((set) => ({
     set({ milestone: { streak, message } });
   },
   clearMilestone: () => set({ milestone: null }),
+
+  // Daily Check-In Celebration Modal
+  celebrationOpen: false,
+  setOpenCelebration: (val) => set({ celebrationOpen: val }),
+  celebratedTodayCount: 0,
+  setCelebratedTodayCount: (val) => set({ celebratedTodayCount: val }),
+
+  // Page Load Cache for Skeletons
+  visitedPages: new Set(),
+  markPageVisited: (page) =>
+    set((state) => {
+      const updated = new Set(state.visitedPages);
+      updated.add(page);
+      return { visitedPages: updated };
+    }),
 }));
 
 export default useAppStore;

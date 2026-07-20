@@ -15,75 +15,105 @@ import FormError from "@/components/ui/FormError";
 import FormLabel from "@/components/ui/FormLabel";
 import Input from "@/components/ui/Input";
 import useAppStore from "@/stores/useAppStore";
+import { Plus, Trash2 } from "lucide-react";
 
 const FREQUENCIES = ["daily", "weekly"];
 
 export default function HabitCreateForm({ userId }) {
-  const router  = useRouter();
+  const router = useRouter();
   const showLoading = useAppStore((state) => state.showLoading);
   const hideLoading = useAppStore((state) => state.hideLoading);
 
   const [form, setForm] = useState({
-    name:         "",
-    category:     "health",
-    frequency:    "daily",
-    reminderTime: "08:00",
+    name: "",
+    category: "health",
+    frequency: "daily",
   });
+  const [reminders, setReminders] = useState(["08:00"]);
   const [saving, setSaving] = useState(false);
-  const [error,  setError]  = useState("");
+  const [error, setError] = useState("");
 
   function update(field, value) {
     setForm((prev) => ({ ...prev, [field]: value }));
     setError("");
   }
 
+  function addReminder() {
+    if (reminders.length >= 4) {
+      setError("You can set a maximum of 4 reminder times.");
+      return;
+    }
+    setReminders([...reminders, "08:00"]);
+    setError("");
+  }
+
+  function removeReminder(idx) {
+    setReminders(reminders.filter((_, i) => i !== idx));
+    setError("");
+  }
+
+  function updateReminder(idx, val) {
+    setReminders(reminders.map((r, i) => (i === idx ? val : r)));
+    setError("");
+  }
+
   async function handleSave() {
-    if (!form.name.trim()) { setError("Give your habit a name."); return; }
+    if (!form.name.trim()) {
+      setError("Give your habit a name.");
+      return;
+    }
     setSaving(true);
     showLoading("Saving habit...");
 
-    const category = Object.values(HABIT_CATEGORIES).find((c) => c.id === form.category);
-    const colorTag = category?.color ?? "#888780";
-    const now      = new Date().toISOString();
+    const categoryObj = Object.values(HABIT_CATEGORIES).find((c) => c.id === form.category);
+    const colorTag = categoryObj?.color ?? "#888780";
+    const now = new Date().toISOString();
+    const remindersStr = reminders.filter((r) => r.trim() !== "").join(",");
 
     const habitData = {
       userId,
-      name:         form.name.trim(),
-      category:     form.category,
-      frequency:    form.frequency,
-      reminderTime: form.reminderTime,
+      name: form.name.trim(),
+      category: form.category,
+      frequency: form.frequency,
+      reminderTime: remindersStr,
       colorTag,
-      archived:     false,
-      createdAt:    now,
+      archived: false,
+      createdAt: now,
     };
 
-    // 1. Save to IndexedDB immediately (works offline)
-    await db.habits.add(habitData);
+    try {
+      // 1. Save to IndexedDB immediately (works offline)
+      await db.habits.add(habitData);
 
-    // 2. Sync to Supabase if online
-    if (navigator.onLine) {
-      const supabase = getSupabase();
-      await supabase.from("habits").insert({
-        user_id:       userId,
-        name:          habitData.name,
-        category:      habitData.category,
-        frequency:     habitData.frequency,
-        reminder_time: habitData.reminderTime,
-        color_tag:     habitData.colorTag,
-      });
-    } else {
-      // Queue for later sync
-      await db.queue.add({ type: "CREATE_HABIT", payload: habitData, createdAt: now });
+      // 2. Sync to Supabase if online
+      if (navigator.onLine) {
+        const supabase = getSupabase();
+        await supabase.from("habits").insert({
+          user_id: userId,
+          name: habitData.name,
+          category: habitData.category,
+          frequency: habitData.frequency,
+          reminder_time: habitData.reminderTime,
+          color_tag: habitData.colorTag,
+        });
+      } else {
+        // Queue for later sync
+        await db.queue.add({ type: "CREATE_HABIT", payload: habitData, createdAt: now });
+      }
+
+      setSaving(false);
+      hideLoading();
+      router.push("/dashboard"); // Redirect to dashboard instead of non-existent /habits
+    } catch (err) {
+      console.error("Failed to save habit:", err);
+      setError("Failed to save habit. Please try again.");
+      setSaving(false);
+      hideLoading();
     }
-
-    setSaving(false);
-    hideLoading();
-    router.push("/habits");
   }
 
   return (
-    <div className="flex flex-col gap-6">
-
+    <div className="flex flex-col gap-6 max-w-2xl mx-auto">
       {/* Habit name */}
       <div>
         <FormLabel>What&apos;s the habit?</FormLabel>
@@ -104,7 +134,7 @@ export default function HabitCreateForm({ userId }) {
             <button
               key={cat.id}
               onClick={() => update("category", cat.id)}
-              className="flex items-center gap-2 px-3 py-2.5 rounded-xl border text-sm capitalize transition-all text-bento-muted bg-bento-card border-bento-border"
+              className="flex items-center gap-2 px-3 py-2.5 rounded-xl border text-sm capitalize transition-all text-bento-muted bg-bento-card border-bento-border cursor-pointer"
               style={{
                 ...(form.category === cat.id
                   ? { background: cat.color + "22", borderColor: cat.color, color: cat.color }
@@ -126,7 +156,7 @@ export default function HabitCreateForm({ userId }) {
             <button
               key={f}
               onClick={() => update("frequency", f)}
-              className={`flex-1 py-3 rounded-xl text-sm font-medium capitalize border transition-all ${
+              className={`flex-1 py-3 rounded-xl text-sm font-medium capitalize border transition-all cursor-pointer ${
                 form.frequency === f
                   ? "bg-stryde-primary-light border-stryde-primary text-stryde-primary-dark"
                   : "bg-transparent border-bento-border text-bento-muted"
@@ -138,18 +168,52 @@ export default function HabitCreateForm({ userId }) {
         </div>
       </div>
 
-      {/* Reminder time */}
-      <div>
-        <FormLabel className="mb-1">Reminder time</FormLabel>
-        <p className="text-xs mb-2 text-bento-muted">
-          We&apos;ll nudge you if you haven&apos;t checked in yet.
-        </p>
-        <Input
-          type="time"
-          value={form.reminderTime}
-          onChange={(e) => update("reminderTime", e.target.value)}
-          className="w-auto"
-        />
+      {/* Reminder Times Section (Grid layout matching Goal form) */}
+      <div className="p-4 rounded-2xl bg-bento-card border border-bento-border">
+        <div className="flex items-center justify-between mb-2">
+          <div>
+            <FormLabel className="mb-0">Reminder Times</FormLabel>
+            <p className="text-[11px] text-bento-muted">
+              Select up to 4 time slots to nudge you daily.
+            </p>
+          </div>
+          {reminders.length < 4 && (
+            <button
+              type="button"
+              onClick={addReminder}
+              className="p-1.5 rounded-lg bg-bento-bg border border-bento-border text-bento-muted hover:text-stryde-primary hover:border-stryde-primary transition-all cursor-pointer"
+              aria-label="Add reminder time"
+            >
+              <Plus className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+
+        <div className="grid grid-cols-2 gap-2 mt-3 sm:grid-cols-3">
+          {reminders.map((time, idx) => (
+            <div key={idx} className="flex items-center gap-2 bg-bento-bg border border-bento-border rounded-xl px-2 py-1">
+              <input
+                type="time"
+                value={time}
+                onChange={(e) => updateReminder(idx, e.target.value)}
+                className="bg-transparent text-sm text-bento-text outline-none w-full p-2"
+              />
+              <button
+                type="button"
+                onClick={() => removeReminder(idx)}
+                className="p-1 rounded-lg text-bento-muted hover:text-stryde-danger transition-all cursor-pointer"
+                aria-label="Remove reminder"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          ))}
+          {reminders.length === 0 && (
+            <p className="text-xs text-bento-muted col-span-full py-2">
+              No reminders set.
+            </p>
+          )}
+        </div>
       </div>
 
       {/* Save */}

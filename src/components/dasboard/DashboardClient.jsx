@@ -27,6 +27,18 @@ export default function DashboardClient({ userId, initialHabits, initialCheckedI
     }
   }, [initialHabits, initialCheckedIds, habits.length, todayCheckIns, setHabits]);
 
+  // Page Load Cache logic
+  const markPageVisited = useAppStore((state) => state.markPageVisited);
+  useEffect(() => {
+    markPageVisited("/dashboard");
+  }, [markPageVisited]);
+
+  const celebrationOpen = useAppStore((state) => state.celebrationOpen);
+  const setOpenCelebration = useAppStore((state) => state.setOpenCelebration);
+  const celebratedTodayCount = useAppStore((state) => state.celebratedTodayCount);
+  const setCelebratedTodayCount = useAppStore((state) => state.setCelebratedTodayCount);
+
+
   // Use store data if present, otherwise fall back to initial props for server-side loading state
   const currentHabits = habits.length > 0 ? habits : initialHabits;
   const dailyHabits = currentHabits.filter((h) => h.frequency === "daily" && !h.archived);
@@ -35,6 +47,23 @@ export default function DashboardClient({ userId, initialHabits, initialCheckedI
   const completedCount = dailyHabits.filter(
     (h) => todayCheckIns[h.id] ?? initialCheckedIds.includes(h.id)
   ).length;
+
+  const isLocked = totalHabits > 0 && completedCount === totalHabits;
+
+  // Trigger celebration modal
+  useEffect(() => {
+    if (totalHabits > 0 && completedCount === totalHabits) {
+      if (celebratedTodayCount !== totalHabits) {
+        setOpenCelebration(true);
+        setCelebratedTodayCount(totalHabits);
+      }
+    } else if (completedCount < totalHabits) {
+      if (celebratedTodayCount > 0) {
+        setCelebratedTodayCount(0);
+      }
+    }
+  }, [completedCount, totalHabits, celebratedTodayCount, setOpenCelebration, setCelebratedTodayCount]);
+
 
   return (
     <div className="flex flex-col gap-6">
@@ -79,9 +108,6 @@ export default function DashboardClient({ userId, initialHabits, initialCheckedI
                 />
               </svg>
             </a>
-            <a href="/habits" className="text-xs text-stryde-primary">
-              See all
-            </a>
           </div>
         </div>
 
@@ -102,6 +128,7 @@ export default function DashboardClient({ userId, initialHabits, initialCheckedI
                   habit={habit}
                   userId={userId}
                   isChecked={isChecked}
+                  isLocked={isLocked}
                 />
               );
             })}

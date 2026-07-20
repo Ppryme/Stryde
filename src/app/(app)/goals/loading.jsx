@@ -1,5 +1,16 @@
+"use client";
+
+import useAppStore from "@/stores/useAppStore";
+
 /** Goals page loading skeleton */
 export default function GoalsLoading() {
+  const visitedPages = useAppStore((state) => state.visitedPages);
+
+  // Skip loading skeleton if goals page has been loaded previously in session
+  if (visitedPages.has("/goals")) {
+    return null;
+  }
+
   return (
     <div className="px-4 pt-10 pb-6 max-w-2xl mx-auto bg-bento-bg min-h-screen">
       {/* Header */}

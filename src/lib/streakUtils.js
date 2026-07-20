@@ -73,3 +73,70 @@ export async function recalculateStreak(habitId, userId) {
 
   return streak;
 }
+
+export async function calculateOverallStreak(userId) {
+  try {
+    // Get all active daily habits for this user
+    const activeHabits = await db.habits
+      .where("userId").equals(userId)
+      .and((h) => h.frequency === "daily" && !h.archived)
+      .toArray();
+
+    if (activeHabits.length === 0) return 0;
+
+    const dailyHabitIds = activeHabits.map((h) => h.id);
+    const totalHabitsCount = dailyHabitIds.length;
+
+    // Get all completed check-ins for this user
+    const checkIns = await db.checkIns
+      .where("userId").equals(userId)
+      .and((c) => c.completed === true)
+      .toArray();
+
+    // Group completed check-ins by date
+    const dateMap = {};
+    checkIns.forEach((c) => {
+      if (dailyHabitIds.includes(c.habitId)) {
+        if (!dateMap[c.date]) {
+          dateMap[c.date] = new Set();
+        }
+        dateMap[c.date].add(c.habitId);
+      }
+    });
+
+    // A date is complete if all active daily habits are completed on that date
+    const completedDates = Object.keys(dateMap)
+      .filter((date) => dateMap[date].size === totalHabitsCount)
+      .sort((a, b) => new Date(b) - new Date(a));
+
+    if (completedDates.length === 0) return 0;
+
+    const today = getLocalDateString();
+    const yesterday = getLocalDateString(new Date(Date.now() - 86_400_000));
+
+    // If the last complete check-in wasn't today or yesterday, streak is broken
+    if (completedDates[0] !== today && completedDates[0] !== yesterday) {
+      return 0;
+    }
+
+    // Count consecutive days going backwards
+    let streak = 1;
+    for (let i = 1; i < completedDates.length; i++) {
+      const newerDate = new Date(completedDates[i - 1]);
+      const olderDate = new Date(completedDates[i]);
+      const dayDiff = (newerDate - olderDate) / 86_400_000;
+
+      if (dayDiff === 1) {
+        streak++;
+      } else {
+        break; // gap found — stop counting
+      }
+    }
+
+    return streak;
+  } catch (err) {
+    console.error("Failed to calculate overall streak:", err);
+    return 0;
+  }
+}
+

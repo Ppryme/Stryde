@@ -10,7 +10,7 @@ import { NextResponse } from "next/server";
 // Routes that DON'T need a logged-in user
 const PUBLIC_ROUTES = ["/sign-in", "/sign-up", "/auth/callback", "/terms", "/privacy"];
 
-export async function middleware(request) {
+export async function proxy(request) {
   const { pathname } = request.nextUrl;
 
   // Allow public routes through without checking auth

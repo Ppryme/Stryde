@@ -41,15 +41,14 @@ export default async function DashboardHome() {
 
   return (
     <div className="px-4 pt-10 pb-6 flex flex-col gap-6 mx-auto max-w-6xl sm:px-6 lg:px-8">
-      <div>
-        <div className="flex justify-between">
-          <p className="text-sm text-bento-muted">{getGreeting()}</p>
-          <SignOutButton />
+      <div className="flex justify-between items-start">
+        <div className="flex flex-col">
+          <p className="text-[10px] font-bold text-bento-muted leading-none uppercase tracking-widest">{getGreeting()}</p>
+          <h1 className="text-2xl font-black text-bento-text mt-1.5 leading-none tracking-tight">
+            {user.user_metadata?.name ?? "Let's get to work."}
+          </h1>
         </div>
-
-        <h1 className="text-2xl font-bold mt-0.5 text-bento-text">
-          {user.user_metadata?.name ?? "Let's get to work."}
-        </h1>
+        <SignOutButton />
       </div>
 
       {/* Unified Interactive Client Section */}

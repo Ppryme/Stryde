@@ -12,6 +12,11 @@ export default function CheckInList({ habits, checkInMap, userId, today }) {
   const storeHabits = useAppStore((state) => state.habits);
   const showMilestone = useAppStore((state) => state.showMilestone);
 
+  const celebrationOpen = useAppStore((state) => state.celebrationOpen);
+  const setOpenCelebration = useAppStore((state) => state.setOpenCelebration);
+  const celebratedTodayCount = useAppStore((state) => state.celebratedTodayCount);
+  const setCelebratedTodayCount = useAppStore((state) => state.setCelebratedTodayCount);
+
   // Initialize Zustand with current DB values on mount
   useEffect(() => {
     const initialMap = {};
@@ -25,6 +30,12 @@ export default function CheckInList({ habits, checkInMap, userId, today }) {
     useAppStore.setState({ todayCheckIns: initialMap });
   }, [checkInMap, habits]);
 
+  // Page Load Cache logic
+  const markPageVisited = useAppStore((state) => state.markPageVisited);
+  useEffect(() => {
+    markPageVisited("/checkin");
+  }, [markPageVisited]);
+
   // Read habits from Zustand store (if populated), filtering out archived habits
   const activeHabits = storeHabits.length > 0 
     ? storeHabits.filter((h) => !h.archived) 
@@ -33,6 +44,22 @@ export default function CheckInList({ habits, checkInMap, userId, today }) {
   const totalHabits = activeHabits.length;
   const completedCount = activeHabits.filter((habit) => !!todayCheckIns[habit.id]).length;
   const percentage = totalHabits > 0 ? Math.round((completedCount / totalHabits) * 100) : 0;
+
+  const isLocked = totalHabits > 0 && completedCount === totalHabits;
+
+  // Trigger celebration modal
+  useEffect(() => {
+    if (totalHabits > 0 && completedCount === totalHabits) {
+      if (celebratedTodayCount !== totalHabits) {
+        setOpenCelebration(true);
+        setCelebratedTodayCount(totalHabits);
+      }
+    } else if (completedCount < totalHabits) {
+      if (celebratedTodayCount > 0) {
+        setCelebratedTodayCount(0);
+      }
+    }
+  }, [completedCount, totalHabits, celebratedTodayCount, setOpenCelebration, setCelebratedTodayCount]);
 
   function handleToggle(habitId, completed) {
     markCheckedIn(habitId, completed);
@@ -43,6 +70,7 @@ export default function CheckInList({ habits, checkInMap, userId, today }) {
       showMilestone(streak);
     }
   }
+
 
   return (
     <div className="flex flex-col gap-6">
@@ -73,6 +101,7 @@ export default function CheckInList({ habits, checkInMap, userId, today }) {
               isChecked={isChecked}
               onToggle={handleToggle}
               onMilestone={handleMilestone}
+              isLocked={isLocked}
             />
           );
         })}

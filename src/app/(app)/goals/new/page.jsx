@@ -6,7 +6,6 @@
 // ─────────────────────────────────────────────
 import { createClient } from "@/lib/supabase-server";
 import { redirect } from "next/navigation";
-import Link from "next/link";
 import GoalCreateForm from "@/components/goals/GoalCreateForm";
 
 export const metadata = { title: "New Goal" };
@@ -24,15 +23,9 @@ export default async function NewGoalPage() {
     .eq("archived", false);
 
   return (
-    <div className="px-4 pt-10 pb-6">
-      {/* Back + title */}
+    <div className="px-4 pt-10 pb-6 max-w-2xl mx-auto">
+      {/* Title */}
       <div className="flex items-center gap-3 mb-8">
-        <Link
-          href="/goals"
-          className="flex items-center justify-center w-9 h-9 rounded-full bg-bento-card border border-bento-border"
-        >
-          <i className="ti ti-arrow-left text-bento-text" aria-hidden="true" />
-        </Link>
         <h1 className="text-xl font-bold text-bento-text">
           New goal
         </h1>

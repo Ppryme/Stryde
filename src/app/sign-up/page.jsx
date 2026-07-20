@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { signUp } from "@/lib/auth";
+import { signUp, signInWithGoogle } from "@/lib/auth";
 import Button from "@/components/ui/button";
 import FormError from "@/components/ui/FormError";
 import Input from "@/components/ui/Input";
@@ -18,6 +18,13 @@ export default function SignUpPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  async function handleGoogle() {
+    setLoading(true);
+    const { error: authError } = await signInWithGoogle();
+    if (authError) setError(authError.message);
+    setLoading(false);
+  }
 
   async function handleSubmit() {
     if (!navigator.onLine) {
@@ -115,6 +122,16 @@ export default function SignUpPage() {
 
           <Button onClick={handleSubmit} disabled={loading || !name.trim() || !email.trim() || !password.trim() || !confirmPassword.trim()} className="w-full py-4 rounded-xl text-sm">
             {loading ? "Creating..." : "Create Account"}
+          </Button>
+
+          <div className="flex items-center gap-3">
+            <div className="flex-1 h-px bg-bento-border" />
+            <span className="text-xs text-bento-muted">or</span>
+            <div className="flex-1 h-px bg-bento-border" />
+          </div>
+
+          <Button onClick={handleGoogle} variant="outline" className="w-full py-3.5 rounded-xl text-sm">
+            Continue with Google
           </Button>
         </div>
 

@@ -34,7 +34,11 @@ export async function syncQueue() {
       }
 
       if (item.type === 'UPDATE_HABIT') {
-        await supabase.from('habits').update({ name: item.payload.name }).eq('id', item.payload.habitId);
+        await supabase.from('habits').update({
+          name: item.payload.name,
+          frequency: item.payload.frequency,
+          reminder_time: item.payload.reminderTime
+        }).eq('id', item.payload.habitId);
       }
 
       if (item.type === 'ARCHIVE_HABIT') {

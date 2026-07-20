@@ -1,5 +1,16 @@
+"use client";
+
+import useAppStore from "@/stores/useAppStore";
+
 /** Analytics page loading skeleton */
 export default function AnalyticsLoading() {
+  const visitedPages = useAppStore((state) => state.visitedPages);
+
+  // Skip loading skeleton if analytics page was visited
+  if (visitedPages.has("/analytics")) {
+    return null;
+  }
+
   return (
     <div className="px-4 pt-10 pb-6 mx-auto max-w-6xl sm:px-6 lg:px-8 bg-bento-bg min-h-screen">
       {/* Header */}

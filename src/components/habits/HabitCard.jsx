@@ -1,18 +1,31 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, memo, useCallback } from "react";
 import { db } from "@/lib/db";
 import { getSupabase } from "@/lib/supabase";
 import { recalculateStreak } from "@/lib/streakUtils";
 import { HABIT_CATEGORIES } from "@/lib/design-token";
-import { CheckCircle2, Edit2, Trash2 } from "lucide-react";
+import { CheckCircle2, Edit2, Trash2, Bell } from "lucide-react";
 import useAppStore from "@/stores/useAppStore";
 import { getLocalDateString } from "@/lib/date";
 
-export default function HabitCard({ habit, userId, isChecked: initialChecked, onMilestone }) {
+function HabitCard({ habit, userId, isChecked: initialChecked, onMilestone, isLocked }) {
   const [pressing, setPressing] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  
+  // Inline edit state variables
   const [editName, setEditName] = useState(habit.name);
+  const [editFrequency, setEditFrequency] = useState(habit.frequency || "daily");
+  const [editReminders, setEditReminders] = useState(() =>
+    (habit.reminder_time || habit.reminderTime || "").split(",").filter(Boolean)
+  );
+
+  // Sync edit state variables if parent habit updates
+  useEffect(() => {
+    setEditName(habit.name);
+    setEditFrequency(habit.frequency || "daily");
+    setEditReminders((habit.reminder_time || habit.reminderTime || "").split(",").filter(Boolean));
+  }, [habit]);
 
   // Hook into Zustand store
   const habits = useAppStore((state) => state.habits);
@@ -26,11 +39,11 @@ export default function HabitCard({ habit, userId, isChecked: initialChecked, on
   const isChecked = todayCheckIns[habit.id] ?? initialChecked;
   const category = Object.values(HABIT_CATEGORIES).find((c) => c.id === habit.category);
   const dotColor = category?.color ?? "#888780";
-  // Use local date so users in non-UTC timezones don't get tomorrow's date
   const today = getLocalDateString();
 
-  async function handleToggle(e) {
+  const handleToggle = useCallback(async (e) => {
     if (e) e.stopPropagation();
+    if (isLocked) return; // Do nothing if check-in is complete for the day
 
     const newValue = !isChecked;
     setPressing(true);
@@ -76,33 +89,52 @@ export default function HabitCard({ habit, userId, isChecked: initialChecked, on
     } catch (err) {
       console.error("Failed to toggle check-in:", err);
     }
-  }
+  }, [isChecked, isLocked, habit.id, userId, today, markCheckedIn, onMilestone]);
 
-  async function handleSaveEdit(e) {
+  const handleSaveEdit = useCallback(async (e) => {
     if (e) e.stopPropagation();
     if (!editName.trim()) return;
 
     showLoading("Saving habit...");
     const updatedName = editName.trim();
+    const remindersStr = editReminders.filter((r) => r.trim() !== "").join(",");
 
     try {
       // 1. Update IndexedDB
-      await db.habits.update(habit.id, { name: updatedName });
+      await db.habits.update(habit.id, {
+        name: updatedName,
+        frequency: editFrequency,
+        reminderTime: remindersStr,
+      });
 
       // 2. Update Zustand store
       const updatedHabits = habits.map((h) =>
-        h.id === habit.id ? { ...h, name: updatedName } : h
+        h.id === habit.id
+          ? { ...h, name: updatedName, frequency: editFrequency, reminder_time: remindersStr }
+          : h
       );
       setHabits(updatedHabits);
 
       // 3. Sync online or queue
       if (navigator.onLine) {
         const supabase = getSupabase();
-        await supabase.from("habits").update({ name: updatedName }).eq("id", habit.id);
+        await supabase
+          .from("habits")
+          .update({
+            name: updatedName,
+            frequency: editFrequency,
+            reminder_time: remindersStr,
+          })
+          .eq("id", habit.id);
       } else {
         await db.queue.add({
           type: "UPDATE_HABIT",
-          payload: { habitId: habit.id, name: updatedName },
+          payload: {
+            habitId: habit.id,
+            name: updatedName,
+            frequency: editFrequency,
+            reminderTime: remindersStr,
+          },
           createdAt: new Date().toISOString(),
         });
       }
@@ -112,9 +144,9 @@ export default function HabitCard({ habit, userId, isChecked: initialChecked, on
     } finally {
       hideLoading();
     }
-  }
+  }, [editName, editFrequency, editReminders, habit.id, habits, setHabits, showLoading, hideLoading]);
 
-  async function handleDelete(e) {
+  const handleDelete = useCallback(async (e) => {
     if (e) e.stopPropagation();
 
     showLoading("Deleting habit...");
@@ -151,33 +183,96 @@ export default function HabitCard({ habit, userId, isChecked: initialChecked, on
         }
       }
     );
-  }
+  }, [habit.id, habit.name, habits, setHabits, showLoading, hideLoading, showUndo]);
 
   if (isEditing) {
     return (
       <div
         onClick={(e) => e.stopPropagation()}
-        className="flex items-center gap-3 px-4 py-3 rounded-2xl border bg-bento-card border-stryde-primary transition-all w-full"
+        className="flex flex-col gap-3.5 p-4 rounded-2xl border bg-bento-card border-stryde-primary transition-all w-full animate-fadeIn"
       >
-        <input
-          type="text"
-          value={editName}
-          onChange={(e) => setEditName(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") handleSaveEdit(e);
-            if (e.key === "Escape") {
-              setEditName(habit.name);
-              setIsEditing(false);
-            }
-          }}
-          autoFocus
-          className="flex-1 bg-bento-bg text-bento-text text-sm px-3 py-1.5 rounded-xl border border-bento-border focus:outline-none focus:border-stryde-primary min-w-0"
-        />
-        <div className="flex items-center gap-1.5 flex-shrink-0">
+        <div>
+          <label className="text-[10px] font-bold text-bento-muted uppercase tracking-wider block mb-1">
+            Habit Name
+          </label>
+          <input
+            type="text"
+            value={editName}
+            onChange={(e) => setEditName(e.target.value)}
+            className="w-full bg-bento-bg text-bento-text text-sm px-3.5 py-2 rounded-xl border border-bento-border focus:outline-none focus:border-stryde-primary min-w-0"
+          />
+        </div>
+
+        <div>
+          <label className="text-[10px] font-bold text-bento-muted uppercase tracking-wider block mb-1">
+            Frequency
+          </label>
+          <div className="flex gap-2">
+            {["daily", "weekly"].map((f) => (
+              <button
+                key={f}
+                type="button"
+                onClick={() => setEditFrequency(f)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold capitalize border transition-all ${
+                  editFrequency === f
+                    ? "bg-stryde-primary text-white border-stryde-primary"
+                    : "bg-transparent border-bento-border text-bento-muted"
+                }`}
+              >
+                {f}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <div className="flex items-center justify-between mb-1">
+            <label className="text-[10px] font-bold text-bento-muted uppercase tracking-wider">
+              Reminder Times (Max 4)
+            </label>
+            {editReminders.length < 4 && (
+              <button
+                type="button"
+                onClick={() => setEditReminders([...editReminders, "08:00"])}
+                className="text-[10px] text-stryde-primary font-bold hover:underline"
+              >
+                + Add Time
+              </button>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {editReminders.map((time, idx) => (
+              <div key={idx} className="flex items-center gap-1.5 bg-bento-bg border border-bento-border rounded-xl px-2 py-1">
+                <input
+                  type="time"
+                  value={time}
+                  onChange={(e) => {
+                    const updated = [...editReminders];
+                    updated[idx] = e.target.value;
+                    setEditReminders(updated);
+                  }}
+                  className="bg-transparent text-xs text-bento-text outline-none p-0.5"
+                />
+                <button
+                  type="button"
+                  onClick={() => setEditReminders(editReminders.filter((_, i) => i !== idx))}
+                  className="text-bento-muted hover:text-stryde-danger text-xs font-bold px-1"
+                >
+                  &times;
+                </button>
+              </div>
+            ))}
+            {editReminders.length === 0 && (
+              <p className="text-[11px] text-bento-muted italic">No reminders set.</p>
+            )}
+          </div>
+        </div>
+
+        <div className="flex items-center justify-end gap-1.5 pt-2 border-t border-bento-border/30 mt-1 flex-shrink-0">
           <button
             onClick={handleSaveEdit}
             disabled={!editName.trim()}
-            className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-stryde-primary text-white hover:bg-stryde-primary-dark transition-colors disabled:opacity-50"
+            className="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-stryde-primary text-white hover:bg-stryde-primary-dark transition-colors disabled:opacity-50"
           >
             Save
           </button>
@@ -185,9 +280,11 @@ export default function HabitCard({ habit, userId, isChecked: initialChecked, on
             onClick={(e) => {
               e.stopPropagation();
               setEditName(habit.name);
+              setEditFrequency(habit.frequency || "daily");
+              setEditReminders((habit.reminder_time || habit.reminderTime || "").split(",").filter(Boolean));
               setIsEditing(false);
             }}
-            className="px-3 py-1.5 rounded-lg text-xs font-semibold border border-bento-border text-bento-muted hover:text-bento-text hover:bg-bento-border transition-colors"
+            className="px-3.5 py-1.5 rounded-lg text-xs font-semibold border border-bento-border text-bento-muted hover:text-bento-text hover:bg-bento-border transition-colors"
           >
             Cancel
           </button>
@@ -196,12 +293,18 @@ export default function HabitCard({ habit, userId, isChecked: initialChecked, on
     );
   }
 
+  const reminderList = (habit.reminder_time || habit.reminderTime || "").split(",").filter(Boolean);
+
   return (
     <div
       data-checked={isChecked}
       data-pressing={pressing}
       onClick={handleToggle}
-      className="group/card flex items-center gap-3 cursor-pointer px-4 py-3 rounded-2xl border bg-bento-card border-bento-border transition-all data-checked:opacity-65 data-pressing:scale-[0.98] w-full min-h-[66px]"
+      className={`group/card flex items-center gap-3 px-4 py-3 rounded-2xl border bg-bento-card border-bento-border transition-all w-full min-h-[66px] ${
+        isLocked
+          ? "cursor-default opacity-85"
+          : "cursor-pointer hover:border-bento-border/80 data-pressing:scale-[0.98]"
+      } ${isChecked ? "opacity-65" : ""}`}
     >
       <div
         className="w-2.5 h-2.5 rounded-full flex-shrink-0"
@@ -212,34 +315,45 @@ export default function HabitCard({ habit, userId, isChecked: initialChecked, on
         <p className={`text-sm font-semibold truncate text-bento-text transition-colors ${isChecked ? "line-through text-bento-muted" : ""}`}>
           {habit.name}
         </p>
-        <p className="text-[11px] capitalize text-bento-muted">
-          {habit.frequency} &middot; {habit.category} 
-        </p>
+        <div className="flex flex-col gap-0.5 mt-0.5">
+          <p className="text-[11px] capitalize text-bento-muted">
+            {habit.frequency} &middot; {habit.category} 
+          </p>
+          {reminderList.length > 0 && (
+            <div className="flex items-center gap-1 text-[10px] text-bento-muted flex-wrap">
+              <Bell className="w-3 h-3 text-bento-muted flex-shrink-0" />
+              <span>{reminderList.join(" · ")}</span>
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Action buttons (Edit & Delete) */}
-      <div className="flex items-center gap-1 opacity-0 group-hover/card:opacity-100 md:opacity-0 max-md:opacity-75 transition-opacity duration-150 mr-1 flex-shrink-0">
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            setIsEditing(true);
-          }}
-          className="p-1.5 rounded-lg text-bento-muted hover:text-stryde-primary hover:bg-bento-border transition-colors"
-          aria-label="Edit habit"
-        >
-          <Edit2 className="w-3.5 h-3.5" />
-        </button>
-        <button
-          onClick={handleDelete}
-          className="p-1.5 rounded-lg text-bento-muted hover:text-stryde-danger hover:bg-bento-border transition-colors"
-          aria-label="Delete habit"
-        >
-          <Trash2 className="w-3.5 h-3.5" />
-        </button>
-      </div>
+      {/* Action buttons (Edit & Delete) - Hidden if check-in is complete (isLocked) */}
+      {!isLocked && (
+        <div className="flex items-center gap-1 opacity-0 group-hover/card:opacity-100 md:opacity-0 max-md:opacity-75 transition-opacity duration-150 mr-1 flex-shrink-0">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsEditing(true);
+            }}
+            className="p-1.5 rounded-lg text-bento-muted hover:text-stryde-primary hover:bg-bento-border transition-colors"
+            aria-label="Edit habit"
+          >
+            <Edit2 className="w-3.5 h-3.5" />
+          </button>
+          <button
+            onClick={handleDelete}
+            className="p-1.5 rounded-lg text-bento-muted hover:text-stryde-danger hover:bg-bento-border transition-colors"
+            aria-label="Delete habit"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
 
       <button
         onClick={handleToggle}
+        disabled={isLocked}
         aria-label={isChecked ? "Mark incomplete" : "Mark complete"}
         aria-pressed={isChecked}
         className={`w-7 h-7 flex items-center justify-center rounded-full flex-shrink-0 ${
@@ -255,3 +369,5 @@ export default function HabitCard({ habit, userId, isChecked: initialChecked, on
     </div>
   );
 }
+
+export default memo(HabitCard);

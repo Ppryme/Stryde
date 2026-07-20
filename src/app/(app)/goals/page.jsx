@@ -8,6 +8,7 @@ import { createClient } from "@/lib/supabase-server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import GoalCard from "@/components/goals/GoalCard";
+import GoalsPageTracker from "@/components/goals/GoalsPageTracker";
 import EmptyState from "@/components/ui/EmptyState";
 import SignOutButton from "@/components/ui/Reusable/SignOutButton";
 
@@ -30,6 +31,7 @@ export default async function GoalsPage() {
 
   return (
     <div className="px-4 pt-10 pb-6 max-w-2xl mx-auto">
+      <GoalsPageTracker />
 
       {/* Header */}
       <div className="flex items-center justify-between mb-6">

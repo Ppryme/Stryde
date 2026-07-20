@@ -8,6 +8,8 @@
 import { useState, useEffect } from "react";
 import { db } from "@/lib/db";
 
+import { calculateOverallStreak } from "@/lib/streakUtils";
+
 export default function StreakBadge({ habitId, userId, trigger }) {
   const [streak, setStreak] = useState(null);
 
@@ -18,10 +20,9 @@ export default function StreakBadge({ habitId, userId, trigger }) {
         const record = await db.streaks.where("habitId").equals(habitId).first();
         setStreak(record?.currentStreak ?? 0);
       } else if (userId) {
-        // Overall best streak across all habits
-        const allStreaks = await db.streaks.toArray();
-        const best = allStreaks.reduce((max, s) => Math.max(max, s.currentStreak), 0);
-        setStreak(best);
+        // Overall check-in completion streak
+        const overall = await calculateOverallStreak(userId);
+        setStreak(overall);
       }
     }
     load();

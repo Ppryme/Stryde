@@ -1,5 +1,16 @@
+"use client";
+
+import useAppStore from "@/stores/useAppStore";
+
 /** Check-in page loading skeleton */
 export default function CheckInLoading() {
+  const visitedPages = useAppStore((state) => state.visitedPages);
+
+  // Skip rendering skeletal loading on back-and-forth transitions if page was visited
+  if (visitedPages.has("/checkin")) {
+    return null;
+  }
+
   return (
     <div className="px-4 pt-10 pb-6 mx-auto max-w-6xl sm:px-6 lg:px-8 bg-bento-bg min-h-screen">
       {/* Header */}
