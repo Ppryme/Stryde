@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { HEATMAP_COLORS } from "@/lib/design-token";
+import { getLocalDateString } from "@/lib/date";
 
 export default function HeatmapCalendar({ checkIns }) {
   const [todayMs] = useState(() => Date.now());
@@ -15,7 +16,7 @@ export default function HeatmapCalendar({ checkIns }) {
   const days = [];
   for (let i = 363; i >= 0; i--) {
     const d = new Date(todayMs - i * 86_400_000);
-    const key = d.toISOString().split("T")[0];
+    const key = getLocalDateString(d);
     const data = byDate[key];
     const rate = data ? data.done / data.total : 0;
     days.push({ key, rate });

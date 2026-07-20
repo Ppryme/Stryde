@@ -61,19 +61,43 @@ function CheckInCard({ habit, userId, today, isChecked, onToggle, onMilestone, i
         });
       }
 
-      const newStreak = await recalculateStreak(habit.id, userId);
-      if (newValue && newStreak) onMilestone?.(newStreak);
+      const { currentStreak, longestStreak } = await recalculateStreak(habit.id, userId);
+      if (newValue && currentStreak) onMilestone?.(currentStreak);
 
       if (navigator.onLine) {
         const supabase = getSupabase();
+        // Persist check-in
         await supabase.from("check_ins").upsert(
           { habit_id: habit.id, user_id: userId, date: clientToday, completed: newValue },
           { onConflict: "habit_id,date" }
+        );
+        // Persist streak — mirrors what Analytics reads
+        await supabase.from("streaks").upsert(
+          {
+            habit_id:        habit.id,
+            user_id:         userId,
+            current_streak:  currentStreak,
+            longest_streak:  longestStreak,
+            last_checked_in: clientToday,
+            updated_at:      new Date().toISOString(),
+          },
+          { onConflict: "habit_id" }
         );
       } else {
         await db.queue.add({
           type: "UPSERT_CHECKIN",
           payload: { habitId: habit.id, userId, date: clientToday, completed: newValue },
+          createdAt: new Date().toISOString(),
+        });
+        await db.queue.add({
+          type: "UPSERT_STREAK",
+          payload: {
+            habitId:       habit.id,
+            userId,
+            currentStreak,
+            longestStreak,
+            lastCheckedIn: clientToday,
+          },
           createdAt: new Date().toISOString(),
         });
       }

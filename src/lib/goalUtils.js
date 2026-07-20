@@ -2,6 +2,7 @@
 // ─────────────────────────────────────────────
 // GOALS UTILITIES — progress, streaks, success rates, status evaluation
 // ─────────────────────────────────────────────
+import { getLocalDateString } from "./date";
 
 export function getDaysDifference(d1, d2) {
   const date1 = new Date(d1);
@@ -16,7 +17,7 @@ export function parseGoal(goal) {
   let tasks = [];
   let reminders = [];
   let completionHistory = {};
-  let createdAtDate = goal.created_at ? goal.created_at.split("T")[0] : new Date().toISOString().split("T")[0];
+  let createdAtDate = goal.created_at ? goal.created_at.split("T")[0] : getLocalDateString();
   let finishedDate = null;
 
   try {
@@ -39,10 +40,10 @@ export function getStreak(history, tasksLength, createdDate) {
   if (tasksLength === 0) return 0;
   let streak = 0;
   let curr = new Date();
-  const todayStr = new Date().toISOString().split("T")[0];
+  const todayStr = getLocalDateString();
 
   while (true) {
-    const dateStr = curr.toISOString().split("T")[0];
+    const dateStr = getLocalDateString(curr);
     if (dateStr < createdDate) break;
 
     const dayCompletions = history[dateStr] ?? [];
@@ -84,7 +85,7 @@ export function calculateSuccessRate(goal) {
   const tasksLength = tasks.length;
   if (tasksLength === 0) return 0;
 
-  const todayStr = new Date().toISOString().split("T")[0];
+  const todayStr = getLocalDateString();
   const elapsedDays = Math.max(1, getDaysDifference(createdAtDate, todayStr) + 1);
 
   const completedDaysCount = Object.keys(completionHistory).filter((date) => {
@@ -99,7 +100,7 @@ export function calculateSuccessRate(goal) {
 export function evaluateGoalStatus(goal) {
   if (goal.status !== "active") return goal.status;
 
-  const todayStr = new Date().toISOString().split("T")[0];
+  const todayStr = getLocalDateString();
   // Target date has arrived or passed (deadline reached)
   if (goal.target_date < todayStr) {
     const progress = calculateProgress(goal);

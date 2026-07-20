@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useMemo, useCallback } from "react";
 import useAppStore from "@/stores/useAppStore";
 import ProgressRing from "@/components/ui/ProgressRing";
 import StreakBadge from "@/components/streaks/StreakBadge";
@@ -8,62 +8,79 @@ import HabitCard from "@/components/habits/HabitCard";
 import EmptyState from "@/components/ui/EmptyState";
 
 export default function DashboardClient({ userId, initialHabits, initialCheckedIds }) {
-  const habits = useAppStore((state) => state.habits);
-  const todayCheckIns = useAppStore((state) => state.todayCheckIns);
-  const setHabits = useAppStore((state) => state.setHabits);
+  const habits            = useAppStore((state) => state.habits);
+  const todayCheckIns     = useAppStore((state) => state.todayCheckIns);
+  const setHabits         = useAppStore((state) => state.setHabits);
+  const markPageVisited   = useAppStore((state) => state.markPageVisited);
+  const setOpenCelebration    = useAppStore((state) => state.setOpenCelebration);
+  const celebratedTodayCount  = useAppStore((state) => state.celebratedTodayCount);
+  const setCelebratedTodayCount = useAppStore((state) => state.setCelebratedTodayCount);
 
-  // Initialize Zustand store state with server-side fetched data on mount
+  // ── Seed Zustand on first mount only ────────────────────────────────────
   useEffect(() => {
-    if (habits.length === 0 && initialHabits) {
+    if (habits.length === 0 && initialHabits?.length) {
       setHabits(initialHabits);
     }
 
-    if (Object.keys(todayCheckIns).length === 0 && initialCheckedIds) {
+    if (Object.keys(todayCheckIns).length === 0 && initialCheckedIds?.length) {
       const initialMap = {};
-      initialHabits.forEach((habit) => {
-        initialMap[habit.id] = initialCheckedIds.includes(habit.id);
+      initialHabits.forEach((h) => {
+        initialMap[h.id] = initialCheckedIds.includes(h.id);
       });
       useAppStore.setState({ todayCheckIns: initialMap });
     }
-  }, [initialHabits, initialCheckedIds, habits.length, todayCheckIns, setHabits]);
+  // We deliberately run only on mount — store mutations are handled internally.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  // Page Load Cache logic
-  const markPageVisited = useAppStore((state) => state.markPageVisited);
+  // ── Page-visit cache (skeleton loader suppression) ───────────────────────
   useEffect(() => {
     markPageVisited("/dashboard");
   }, [markPageVisited]);
 
-  const celebrationOpen = useAppStore((state) => state.celebrationOpen);
-  const setOpenCelebration = useAppStore((state) => state.setOpenCelebration);
-  const celebratedTodayCount = useAppStore((state) => state.celebratedTodayCount);
-  const setCelebratedTodayCount = useAppStore((state) => state.setCelebratedTodayCount);
+  // ── Stable set for O(1) "was this habit checked?" lookups ───────────────
+  const initialCheckedSet = useMemo(
+    () => new Set(initialCheckedIds),
+    [initialCheckedIds]
+  );
 
-
-  // Use store data if present, otherwise fall back to initial props for server-side loading state
+  // ── Derived display values ────────────────────────────────────────────────
   const currentHabits = habits.length > 0 ? habits : initialHabits;
-  const dailyHabits = currentHabits.filter((h) => h.frequency === "daily" && !h.archived);
-  
+
+  const dailyHabits = useMemo(
+    () => currentHabits.filter((h) => h.frequency === "daily" && !h.archived),
+    [currentHabits]
+  );
+
   const totalHabits = dailyHabits.length;
-  const completedCount = dailyHabits.filter(
-    (h) => todayCheckIns[h.id] ?? initialCheckedIds.includes(h.id)
-  ).length;
+
+  const completedCount = useMemo(
+    () => dailyHabits.filter((h) => todayCheckIns[h.id] ?? initialCheckedSet.has(h.id)).length,
+    [dailyHabits, todayCheckIns, initialCheckedSet]
+  );
 
   const isLocked = totalHabits > 0 && completedCount === totalHabits;
 
-  // Trigger celebration modal
+  // ── Celebration modal trigger ────────────────────────────────────────────
+  // We track `celebratedTodayCount` so re-renders don't re-open the modal
+  // when the count hasn't actually changed (prevents double-firing).
   useEffect(() => {
     if (totalHabits > 0 && completedCount === totalHabits) {
       if (celebratedTodayCount !== totalHabits) {
         setOpenCelebration(true);
         setCelebratedTodayCount(totalHabits);
       }
-    } else if (completedCount < totalHabits) {
-      if (celebratedTodayCount > 0) {
-        setCelebratedTodayCount(0);
-      }
+    } else if (completedCount < totalHabits && celebratedTodayCount > 0) {
+      // A new habit was added — reset so the modal will fire again once complete.
+      setCelebratedTodayCount(0);
     }
   }, [completedCount, totalHabits, celebratedTodayCount, setOpenCelebration, setCelebratedTodayCount]);
 
+  // ── Stable isChecked resolver (avoids anonymous fn in map) ───────────────
+  const getIsChecked = useCallback(
+    (habitId) => todayCheckIns[habitId] ?? initialCheckedSet.has(habitId),
+    [todayCheckIns, initialCheckedSet]
+  );
 
   return (
     <div className="flex flex-col gap-6">
@@ -77,7 +94,7 @@ export default function DashboardClient({ userId, initialHabits, initialCheckedI
               {completedCount}/{totalHabits} done
             </p>
           </div>
-          {/* Pass trigger instead of key to prevent unmounting and flickering */}
+          {/* trigger re-fetches streak whenever completed count changes */}
           <StreakBadge userId={userId} trigger={completedCount} />
         </div>
       </div>
@@ -94,18 +111,8 @@ export default function DashboardClient({ userId, initialHabits, initialCheckedI
               className="flex items-center justify-center p-1 rounded-md text-bento-muted hover:text-stryde-primary hover:bg-bento-border transition-all"
               aria-label="Create a habit"
             >
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 4v16m8-8H4"
-                />
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
               </svg>
             </a>
           </div>
@@ -120,18 +127,15 @@ export default function DashboardClient({ userId, initialHabits, initialCheckedI
           />
         ) : (
           <div className="flex flex-col gap-2">
-            {dailyHabits.slice(0, 4).map((habit) => {
-              const isChecked = todayCheckIns[habit.id] ?? initialCheckedIds.includes(habit.id);
-              return (
-                <HabitCard
-                  key={habit.id}
-                  habit={habit}
-                  userId={userId}
-                  isChecked={isChecked}
-                  isLocked={isLocked}
-                />
-              );
-            })}
+            {dailyHabits.slice(0, 4).map((habit) => (
+              <HabitCard
+                key={habit.id}
+                habit={habit}
+                userId={userId}
+                isChecked={getIsChecked(habit.id)}
+                isLocked={isLocked}
+              />
+            ))}
           </div>
         )}
       </section>

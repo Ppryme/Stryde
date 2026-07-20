@@ -68,13 +68,26 @@ function HabitCard({ habit, userId, isChecked: initialChecked, onMilestone, isLo
         });
       }
 
-      const newStreak = await recalculateStreak(habit.id, userId);
+      const { currentStreak, longestStreak } = await recalculateStreak(habit.id, userId);
 
       if (navigator.onLine) {
         const supabase = getSupabase();
+        // Persist check-in
         await supabase.from("check_ins").upsert(
           { habit_id: habit.id, user_id: userId, date: today, completed: newValue },
           { onConflict: "habit_id,date" }
+        );
+        // Persist streak — mirrors what Analytics reads
+        await supabase.from("streaks").upsert(
+          {
+            habit_id:        habit.id,
+            user_id:         userId,
+            current_streak:  currentStreak,
+            longest_streak:  longestStreak,
+            last_checked_in: today,
+            updated_at:      new Date().toISOString(),
+          },
+          { onConflict: "habit_id" }
         );
       } else {
         await db.queue.add({
@@ -82,10 +95,21 @@ function HabitCard({ habit, userId, isChecked: initialChecked, onMilestone, isLo
           payload: { habitId: habit.id, userId, date: today, completed: newValue },
           createdAt: new Date().toISOString(),
         });
+        await db.queue.add({
+          type: "UPSERT_STREAK",
+          payload: {
+            habitId:       habit.id,
+            userId,
+            currentStreak,
+            longestStreak,
+            lastCheckedIn: today,
+          },
+          createdAt: new Date().toISOString(),
+        });
       }
 
       // Fire milestone callback if warranted
-      if (newValue && newStreak) onMilestone?.(newStreak);
+      if (newValue && currentStreak) onMilestone?.(currentStreak);
     } catch (err) {
       console.error("Failed to toggle check-in:", err);
     }

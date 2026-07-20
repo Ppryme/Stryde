@@ -45,6 +45,20 @@ export async function syncQueue() {
         await supabase.from('habits').update({ archived: true }).eq('id', item.payload.habitId);
       }
 
+      if (item.type === 'UPSERT_STREAK') {
+        await supabase.from('streaks').upsert(
+          {
+            habit_id:       item.payload.habitId,
+            user_id:        item.payload.userId,
+            current_streak: item.payload.currentStreak,
+            longest_streak: item.payload.longestStreak,
+            last_checked_in: item.payload.lastCheckedIn,
+            updated_at:     new Date().toISOString(),
+          },
+          { onConflict: 'habit_id' }
+        );
+      }
+
       // Remove from queue on success
       await db.queue.delete(item.id);
     } catch (err) {

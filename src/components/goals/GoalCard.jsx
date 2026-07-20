@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, memo, useCallback } from "react";
+import { useState, useEffect, useMemo, memo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { getSupabase } from "@/lib/supabase";
 import Badge from "@/components/ui/badge";
@@ -11,6 +11,7 @@ import {
   evaluateGoalStatus,
   getDaysDifference,
 } from "@/lib/goalUtils";
+import { getLocalDateString } from "@/lib/date";
 import {
   ChevronDown,
   ChevronUp,
@@ -49,15 +50,28 @@ function GoalCard({ goal }) {
   const [newTargetDate, setNewTargetDate] = useState("");
   const [error, setError] = useState("");
 
-  const todayStr = new Date().toISOString().split("T")[0];
-  const { tasks, completionHistory, createdAtDate } = parseGoal(goal);
+  const todayStr = getLocalDateString();
 
-  // Local state for optimistic updates
+  // Memoize parsed goal data — parseGoal returns new object references every render,
+  // so we must stabilise on goal.id + goal.description (both are primitive strings).
+  const parsedGoal = useMemo(
+    () => parseGoal(goal),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [goal.id, goal.description]
+  );
+  const { tasks, completionHistory, createdAtDate } = parsedGoal;
+
+  // Local state for optimistic checklist updates.
+  // Initialised once from the memoized value; synced back only when the
+  // server description actually changes (goal.description is a stable string).
   const [localHistory, setLocalHistory] = useState(completionHistory);
 
   useEffect(() => {
     setLocalHistory(completionHistory);
-  }, [completionHistory]);
+    // Only re-sync when the server sends a new description (string comparison —
+    // no infinite loop from object identity).
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [goal.description]);
 
   const todayCompletions = localHistory[todayStr] ?? [];
   const completedTodayCount = todayCompletions.length;
@@ -66,7 +80,10 @@ function GoalCard({ goal }) {
   const daysRemaining = Math.max(0, getDaysDifference(todayStr, goal.target_date));
   const streak = getStreak(localHistory, totalTasksCount, createdAtDate);
 
-  // Auto-evaluation hook
+  // Auto-evaluation hook — runs only when the goal's status or deadline actually
+  // changes. Keyed on PRIMITIVE props so we never re-fire just because the parent
+  // re-rendered and passed a new goal object reference (which would cause an
+  // infinite loop via router.refresh() → re-render → new goal ref → effect again).
   useEffect(() => {
     async function evaluateStatus() {
       if (goal.status !== "active") return;
@@ -85,7 +102,8 @@ function GoalCard({ goal }) {
       }
     }
     evaluateStatus();
-  }, [goal, router]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [goal.id, goal.status, goal.target_date]);
 
   const toggleTask = useCallback(async (taskId, e) => {
     if (e) e.stopPropagation();
