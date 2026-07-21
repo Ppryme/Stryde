@@ -7,22 +7,19 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { db } from "@/lib/db";
-import { getSupabase } from "@/lib/supabase";
+import { useHabit } from "@/hooks/useHabit";
 import { HABIT_CATEGORIES } from "@/lib/design-token";
 import Button from "@/components/ui/button";
 import FormError from "@/components/ui/FormError";
 import FormLabel from "@/components/ui/FormLabel";
 import Input from "@/components/ui/Input";
-import useAppStore from "@/stores/useAppStore";
 import { Plus, Trash2 } from "lucide-react";
 
 const FREQUENCIES = ["daily", "weekly"];
 
 export default function HabitCreateForm({ userId }) {
   const router = useRouter();
-  const showLoading = useAppStore((state) => state.showLoading);
-  const hideLoading = useAppStore((state) => state.hideLoading);
+  const { createHabit, saving, error, setError } = useHabit();
 
   const [form, setForm] = useState({
     name: "",
@@ -30,8 +27,6 @@ export default function HabitCreateForm({ userId }) {
     frequency: "daily",
   });
   const [reminders, setReminders] = useState(["08:00"]);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
 
   function update(field, value) {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -62,8 +57,6 @@ export default function HabitCreateForm({ userId }) {
       setError("Give your habit a name.");
       return;
     }
-    setSaving(true);
-    showLoading("Saving habit...");
 
     const categoryObj = Object.values(HABIT_CATEGORIES).find((c) => c.id === form.category);
     const colorTag = categoryObj?.color ?? "#888780";
@@ -81,34 +74,9 @@ export default function HabitCreateForm({ userId }) {
       createdAt: now,
     };
 
-    try {
-      // 1. Save to IndexedDB immediately (works offline)
-      await db.habits.add(habitData);
-
-      // 2. Sync to Supabase if online
-      if (navigator.onLine) {
-        const supabase = getSupabase();
-        await supabase.from("habits").insert({
-          user_id: userId,
-          name: habitData.name,
-          category: habitData.category,
-          frequency: habitData.frequency,
-          reminder_time: habitData.reminderTime,
-          color_tag: habitData.colorTag,
-        });
-      } else {
-        // Queue for later sync
-        await db.queue.add({ type: "CREATE_HABIT", payload: habitData, createdAt: now });
-      }
-
-      setSaving(false);
-      hideLoading();
-      router.push("/dashboard"); // Redirect to dashboard instead of non-existent /habits
-    } catch (err) {
-      console.error("Failed to save habit:", err);
-      setError("Failed to save habit. Please try again.");
-      setSaving(false);
-      hideLoading();
+    const success = await createHabit(habitData);
+    if (success) {
+      router.push("/dashboard");
     }
   }
 

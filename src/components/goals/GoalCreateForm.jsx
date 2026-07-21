@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { getSupabase } from "@/lib/supabase";
+import { useGoal } from "@/hooks/useGoal";
 import Button from "@/components/ui/button";
 import FormError from "@/components/ui/FormError";
 import FormLabel from "@/components/ui/FormLabel";
@@ -13,15 +13,12 @@ import { getLocalDateString } from "@/lib/date";
 
 export default function GoalCreateForm({ userId }) {
   const router = useRouter();
-  const showLoading = useAppStore((state) => state.showLoading);
-  const hideLoading = useAppStore((state) => state.hideLoading);
-
   const [title, setTitle] = useState("");
   const [tasks, setTasks] = useState([{ id: "init-0", name: "" }]);
   const [reminders, setReminders] = useState(["08:00"]);
   const [targetDate, setTargetDate] = useState("");
-  const [error, setError] = useState("");
-  const [saving, setSaving] = useState(false);
+
+  const { createGoal, saving, error, setError } = useGoal();
 
   function addTask() {
     setTasks([...tasks, { id: `task-${Date.now()}-${Math.random()}`, name: "" }]);
@@ -78,8 +75,6 @@ export default function GoalCreateForm({ userId }) {
       return;
     }
 
-    setSaving(true);
-    showLoading("Saving goal...");
     setError("");
 
     try {
@@ -96,8 +91,7 @@ export default function GoalCreateForm({ userId }) {
         finished_date: null,
       });
 
-      const supabase = getSupabase();
-      const { error: insertError } = await supabase.from("goals").insert({
+      const success = await createGoal({
         user_id: userId,
         title: title.trim(),
         description: goalPayload,
@@ -106,16 +100,11 @@ export default function GoalCreateForm({ userId }) {
         status: "active",
       });
 
-      if (insertError) {
-        setError("Something went wrong saving the goal. Try again.");
-        console.error(insertError);
-        return;
-      }
+      if (!success) return;
 
       router.push("/goals");
-    } finally {
-      setSaving(false);
-      hideLoading();
+    } catch (err) {
+      console.error(err);
     }
   }
 

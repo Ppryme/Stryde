@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, memo, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { getSupabase } from "@/lib/supabase";
+import { useGoal } from "@/hooks/useGoal";
 import Badge from "@/components/ui/badge";
 import useAppStore from "@/stores/useAppStore";
 import {
@@ -44,6 +44,8 @@ function GoalCard({ goal }) {
   const router = useRouter();
   const showLoading = useAppStore((state) => state.showLoading);
   const hideLoading = useAppStore((state) => state.hideLoading);
+
+  const { updateGoal, deleteGoal } = useGoal();
 
   const [expanded, setExpanded] = useState(false);
   const [extending, setExtending] = useState(false);
@@ -90,11 +92,7 @@ function GoalCard({ goal }) {
       try {
         const evaluated = evaluateGoalStatus(goal);
         if (evaluated !== goal.status) {
-          const supabase = getSupabase();
-          await supabase
-            .from("goals")
-            .update({ status: evaluated })
-            .eq("id", goal.id);
+          await updateGoal(goal.id, { status: evaluated });
           router.refresh();
         }
       } catch (err) {
@@ -145,14 +143,10 @@ function GoalCard({ goal }) {
     });
 
     try {
-      const supabase = getSupabase();
-      await supabase
-        .from("goals")
-        .update({
-          description: newDescription,
-          progress_pct: newProgress,
-        })
-        .eq("id", goal.id);
+      await updateGoal(goal.id, {
+        description: newDescription,
+        progress_pct: newProgress,
+      });
 
       router.refresh();
     } catch (err) {
@@ -168,15 +162,10 @@ function GoalCard({ goal }) {
 
     showLoading("Deleting goal...");
     try {
-      const supabase = getSupabase();
-      const { error: err } = await supabase
-        .from("goals")
-        .delete()
-        .eq("id", goal.id);
+      const success = await deleteGoal(goal.id);
 
-      if (err) {
+      if (!success) {
         alert("Failed to delete goal. Try again.");
-        console.error(err);
       } else {
         router.refresh();
       }
@@ -198,16 +187,12 @@ function GoalCard({ goal }) {
     setError("");
 
     try {
-      const supabase = getSupabase();
-      const { error: err } = await supabase
-        .from("goals")
-        .update({
-          target_date: newTargetDate,
-          status: "active",
-        })
-        .eq("id", goal.id);
+      const success = await updateGoal(goal.id, {
+        target_date: newTargetDate,
+        status: "active",
+      });
 
-      if (err) {
+      if (!success) {
         setError("Failed to extend deadline.");
       } else {
         setExtending(false);
@@ -236,15 +221,11 @@ function GoalCard({ goal }) {
     });
 
     try {
-      const supabase = getSupabase();
-      await supabase
-        .from("goals")
-        .update({
-          description: newDescription,
-          progress_pct: 0,
-          status: "active",
-        })
-        .eq("id", goal.id);
+      await updateGoal(goal.id, {
+        description: newDescription,
+        progress_pct: 0,
+        status: "active",
+      });
 
       router.refresh();
     } catch (err) {
@@ -258,11 +239,7 @@ function GoalCard({ goal }) {
     if (!confirm("Archive this goal? It will be moved to history and will no longer show as active.")) return;
 
     try {
-      const supabase = getSupabase();
-      await supabase
-        .from("goals")
-        .update({ status: "archived" })
-        .eq("id", goal.id);
+      await updateGoal(goal.id, { status: "archived" });
 
       router.refresh();
     } catch (err) {

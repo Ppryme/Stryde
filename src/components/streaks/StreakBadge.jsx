@@ -13,8 +13,7 @@
 // ─────────────────────────────────────────────
 "use client";
 import { useState, useEffect } from "react";
-import { db } from "@/lib/db";
-import { calculateOverallStreak } from "@/lib/streakUtils";
+import { StreakRepository } from "@/repositories/streakRepository";
 import { Flame } from "lucide-react";
 
 export default function StreakBadge({ habitId, userId, trigger }) {
@@ -29,10 +28,9 @@ export default function StreakBadge({ habitId, userId, trigger }) {
       let value = 0;
 
       if (habitId) {
-        const record = await db.streaks.where("habitId").equals(habitId).first();
-        value = record?.currentStreak ?? 0;
+        value = await StreakRepository.getHabitStreak(habitId);
       } else if (userId) {
-        value = await calculateOverallStreak(userId);
+        value = await StreakRepository.getOverallStreak(userId);
       }
 
       if (!cancelled) setStreak(value);

@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { db } from '@/lib/db';
 import { supabase } from '@/lib/supabase';
 import useAppStore from '@/stores/useAppStore';
-import { recalculateStreak } from '@/lib/streakUtils';
+import { StreakRepository } from '@/repositories/streakRepository';
 
 export function useCheckins(userId) {
   const { todayCheckIns, markCheckedIn } = useAppStore();
@@ -52,7 +52,7 @@ export function useCheckins(userId) {
     }
 
     // 3. Recalculate streak locally
-    await recalculateStreak(habitId, userId);
+    await StreakRepository.updateStreak(habitId, userId);
 
     // 4. Queue for Supabase sync
     await db.queue.add({

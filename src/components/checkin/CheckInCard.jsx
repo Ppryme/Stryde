@@ -3,28 +3,23 @@
 import { useState, useEffect, memo, useCallback } from "react";
 import { db } from "@/lib/db";
 import { getSupabase } from "@/lib/supabase";
-import { recalculateStreak } from "@/lib/streakUtils";
+import { StreakRepository } from "@/repositories/streakRepository";
 import { CheckCircle2, Edit2, Trash2, Bell } from "lucide-react";
 import useAppStore from "@/stores/useAppStore";
 import { getLocalDateString } from "@/lib/date";
+import { useHabit } from "@/hooks/useHabit";
+import { CheckInRepository } from "@/repositories/checkInRepository";
 
 function CheckInCard({ habit, userId, today, isChecked, onToggle, onMilestone, isLocked }) {
   const [pressing, setPressing] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
 
   // Inline edit state variables
-  const [editName, setEditName] = useState(habit.name);
-  const [editFrequency, setEditFrequency] = useState(habit.frequency || "daily");
+  const [editName, setEditName] = useState(() => habit.name);
+  const [editFrequency, setEditFrequency] = useState(() => habit.frequency || "daily");
   const [editReminders, setEditReminders] = useState(() =>
     (habit.reminder_time || habit.reminderTime || "").split(",").filter(Boolean)
   );
-
-  // Sync edit state variables if parent habit updates
-  useEffect(() => {
-    setEditName(habit.name);
-    setEditFrequency(habit.frequency || "daily");
-    setEditReminders((habit.reminder_time || habit.reminderTime || "").split(",").filter(Boolean));
-  }, [habit]);
 
   // Hook into Zustand store to handle editing & deleting the habit
   const habits = useAppStore((state) => state.habits);
@@ -32,6 +27,8 @@ function CheckInCard({ habit, userId, today, isChecked, onToggle, onMilestone, i
   const showLoading = useAppStore((state) => state.showLoading);
   const hideLoading = useAppStore((state) => state.hideLoading);
   const showUndo = useAppStore((state) => state.showUndo);
+
+  const { updateHabit, archiveHabit } = useHabit();
 
   const handleTap = useCallback(async () => {
     if (isLocked) return; // Do nothing if locked (all checked off for the day)
@@ -44,63 +41,15 @@ function CheckInCard({ habit, userId, today, isChecked, onToggle, onMilestone, i
     setTimeout(() => setPressing(false), 150);
 
     try {
-      const existing = await db.checkIns
-        .where({ habitId: habit.id, userId, date: clientToday })
-        .first();
+      await CheckInRepository.upsertCheckIn({
+        habitId: habit.id,
+        userId,
+        date: clientToday,
+        completed: newValue,
+      });
 
-      if (existing) {
-        await db.checkIns.update(existing.id, { completed: newValue, synced: false });
-      } else {
-        await db.checkIns.add({
-          habitId: habit.id,
-          userId,
-          date: clientToday,
-          completed: newValue,
-          synced: false,
-          createdAt: new Date().toISOString(),
-        });
-      }
-
-      const { currentStreak, longestStreak } = await recalculateStreak(habit.id, userId);
+      const { currentStreak } = await StreakRepository.updateStreak(habit.id, userId);
       if (newValue && currentStreak) onMilestone?.(currentStreak);
-
-      if (navigator.onLine) {
-        const supabase = getSupabase();
-        // Persist check-in
-        await supabase.from("check_ins").upsert(
-          { habit_id: habit.id, user_id: userId, date: clientToday, completed: newValue },
-          { onConflict: "habit_id,date" }
-        );
-        // Persist streak — mirrors what Analytics reads
-        await supabase.from("streaks").upsert(
-          {
-            habit_id:        habit.id,
-            user_id:         userId,
-            current_streak:  currentStreak,
-            longest_streak:  longestStreak,
-            last_checked_in: clientToday,
-            updated_at:      new Date().toISOString(),
-          },
-          { onConflict: "habit_id" }
-        );
-      } else {
-        await db.queue.add({
-          type: "UPSERT_CHECKIN",
-          payload: { habitId: habit.id, userId, date: clientToday, completed: newValue },
-          createdAt: new Date().toISOString(),
-        });
-        await db.queue.add({
-          type: "UPSERT_STREAK",
-          payload: {
-            habitId:       habit.id,
-            userId,
-            currentStreak,
-            longestStreak,
-            lastCheckedIn: clientToday,
-          },
-          createdAt: new Date().toISOString(),
-        });
-      }
     } catch (err) {
       console.error("Failed to toggle check-in:", err);
     }
@@ -115,8 +64,7 @@ function CheckInCard({ habit, userId, today, isChecked, onToggle, onMilestone, i
     const remindersStr = editReminders.filter((r) => r.trim() !== "").join(",");
 
     try {
-      // 1. Update IndexedDB
-      await db.habits.update(habit.id, {
+      await updateHabit(habit.id, {
         name: updatedName,
         frequency: editFrequency,
         reminderTime: remindersStr,
@@ -129,37 +77,13 @@ function CheckInCard({ habit, userId, today, isChecked, onToggle, onMilestone, i
           : h
       );
       setHabits(updatedHabits);
-
-      // 3. Sync online or queue
-      if (navigator.onLine) {
-        const supabase = getSupabase();
-        await supabase
-          .from("habits")
-          .update({
-            name: updatedName,
-            frequency: editFrequency,
-            reminder_time: remindersStr,
-          })
-          .eq("id", habit.id);
-      } else {
-        await db.queue.add({
-          type: "UPDATE_HABIT",
-          payload: {
-            habitId: habit.id,
-            name: updatedName,
-            frequency: editFrequency,
-            reminderTime: remindersStr,
-          },
-          createdAt: new Date().toISOString(),
-        });
-      }
       setIsEditing(false);
     } catch (err) {
       console.error("Failed to save habit edit:", err);
     } finally {
       hideLoading();
     }
-  }, [editName, editFrequency, editReminders, habit.id, habits, setHabits, showLoading, hideLoading]);
+  }, [editName, editFrequency, editReminders, habit.id, habits, setHabits, showLoading, hideLoading, updateHabit]);
 
   const handleDelete = useCallback(async (e) => {
     if (e) e.stopPropagation();
@@ -181,24 +105,13 @@ function CheckInCard({ habit, userId, today, isChecked, onToggle, onMilestone, i
       async () => {
         try {
           // Dismiss: Permanently delete/archive
-          await db.habits.update(habitId, { archived: true });
-
-          if (navigator.onLine) {
-            const supabase = getSupabase();
-            await supabase.from("habits").update({ archived: true }).eq("id", habitId);
-          } else {
-            await db.queue.add({
-              type: "ARCHIVE_HABIT",
-              payload: { habitId },
-              createdAt: new Date().toISOString(),
-            });
-          }
+          await archiveHabit(habitId);
         } catch (err) {
           console.error("Failed to delete habit:", err);
         }
       }
     );
-  }, [habit.id, habit.name, habits, setHabits, showLoading, hideLoading, showUndo]);
+  }, [habit.id, habit.name, habits, setHabits, showLoading, hideLoading, showUndo, archiveHabit]);
 
   if (isEditing) {
     return (

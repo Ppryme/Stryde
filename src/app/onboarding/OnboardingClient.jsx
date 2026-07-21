@@ -8,6 +8,7 @@ import Button from "@/components/ui/button";
 import FormError from "@/components/ui/FormError";
 import Input from "@/components/ui/Input";
 import { getSupabase } from "@/lib/supabase";
+import { GoalRepository } from "@/repositories/goalRepository";
 import { HABIT_CATEGORIES } from "@/lib/design-token";
 import useAppStore from "@/stores/useAppStore";
 import { Plus, Trash2, ChevronRight, ChevronLeft } from "lucide-react";
@@ -178,16 +179,16 @@ export default function OnboardingClient() {
           finished_date: null,
         });
 
-        const { error: goalInsertError } = await supabase.from("goals").insert({
-          user_id: user.id,
-          title: goalTitle.trim(),
-          description: goalPayload,
-          target_date: goalTargetDate,
-          progress_pct: 0,
-          status: "active",
-        });
-
-        if (goalInsertError) {
+        try {
+          await GoalRepository.createGoal({
+            user_id: user.id,
+            title: goalTitle.trim(),
+            description: goalPayload,
+            target_date: goalTargetDate,
+            progress_pct: 0,
+            status: "active",
+          });
+        } catch (goalInsertError) {
           console.error("Failed to create optional goal:", goalInsertError);
           // Don't halt onboarding completely if only the optional goal fails, but notify
         }
