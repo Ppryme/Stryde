@@ -14,7 +14,23 @@ export function useHabit() {
     setError("");
 
     try {
-      await HabitRepository.createHabit(habitData);
+      const newHabit = await HabitRepository.createHabit(habitData);
+      
+      // Update Zustand store immediately
+      const habits = useAppStore.getState().habits;
+      useAppStore.setState({
+        habits: [
+          ...habits, 
+          { 
+            ...newHabit, 
+            reminder_time: newHabit.reminderTime,
+            color_tag: newHabit.colorTag,
+            user_id: newHabit.userId,
+            created_at: newHabit.createdAt
+          }
+        ]
+      });
+
       setSaving(false);
       hideLoading();
       return true; // indicates success

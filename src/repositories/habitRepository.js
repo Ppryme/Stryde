@@ -10,18 +10,22 @@ export const HabitRepository = {
    */
   async createHabit(habitData) {
     // 1. Save to IndexedDB immediately (works offline)
+    // Dexie requires string ID for v2
     await db.habits.add(habitData);
 
     // 2. Sync to Supabase if online
     if (navigator.onLine) {
       const supabase = getSupabase();
       await supabase.from("habits").insert({
+        id: habitData.id,
         user_id: habitData.userId,
         name: habitData.name,
         category: habitData.category,
         frequency: habitData.frequency,
         reminder_time: habitData.reminderTime,
         color_tag: habitData.colorTag,
+        archived: habitData.archived,
+        created_at: habitData.createdAt,
       });
     } else {
       // Queue for later sync
@@ -31,6 +35,8 @@ export const HabitRepository = {
         createdAt: habitData.createdAt 
       });
     }
+
+    return habitData;
   },
 
   /**

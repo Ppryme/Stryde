@@ -64,6 +64,7 @@ export default function HabitCreateForm({ userId }) {
     const remindersStr = reminders.filter((r) => r.trim() !== "").join(",");
 
     const habitData = {
+      id: crypto.randomUUID(),
       userId,
       name: form.name.trim(),
       category: form.category,
@@ -76,6 +77,10 @@ export default function HabitCreateForm({ userId }) {
 
     const success = await createHabit(habitData);
     if (success) {
+      if (!navigator.onLine) {
+        // Optional: show a small non-blocking toast, assuming we have one.
+        // For now, we just proceed to dashboard. The sync engine will queue it.
+      }
       router.push("/dashboard");
     }
   }
@@ -88,6 +93,7 @@ export default function HabitCreateForm({ userId }) {
         <Input
           type="text"
           value={form.name}
+          disabled={saving}
           onChange={(e) => update("name", e.target.value)}
           placeholder="e.g. Morning run, Read 20 pages..."
         />
@@ -123,12 +129,13 @@ export default function HabitCreateForm({ userId }) {
           {FREQUENCIES.map((f) => (
             <button
               key={f}
+              disabled={saving}
               onClick={() => update("frequency", f)}
               className={`flex-1 py-3 rounded-xl text-sm font-medium capitalize border transition-all cursor-pointer ${
                 form.frequency === f
                   ? "bg-stryde-primary-light border-stryde-primary text-stryde-primary-dark"
                   : "bg-transparent border-bento-border text-bento-muted"
-              }`}
+              } ${saving ? "opacity-50 cursor-not-allowed" : ""}`}
             >
               {f}
             </button>
@@ -148,8 +155,9 @@ export default function HabitCreateForm({ userId }) {
           {reminders.length < 4 && (
             <button
               type="button"
+              disabled={saving}
               onClick={addReminder}
-              className="p-1.5 rounded-lg bg-bento-bg border border-bento-border text-bento-muted hover:text-stryde-primary hover:border-stryde-primary transition-all cursor-pointer"
+              className="p-1.5 rounded-lg bg-bento-bg border border-bento-border text-bento-muted hover:text-stryde-primary hover:border-stryde-primary transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               aria-label="Add reminder time"
             >
               <Plus className="w-4 h-4" />
@@ -159,17 +167,19 @@ export default function HabitCreateForm({ userId }) {
 
         <div className="grid grid-cols-2 gap-2 mt-3 sm:grid-cols-3">
           {reminders.map((time, idx) => (
-            <div key={idx} className="flex items-center gap-2 bg-bento-bg border border-bento-border rounded-xl px-2 py-1">
+            <div key={idx} className={`flex items-center gap-2 bg-bento-bg border border-bento-border rounded-xl px-2 py-1 ${saving ? "opacity-50" : ""}`}>
               <input
                 type="time"
                 value={time}
+                disabled={saving}
                 onChange={(e) => updateReminder(idx, e.target.value)}
-                className="bg-transparent text-sm text-bento-text outline-none w-full p-2"
+                className="bg-transparent text-sm text-bento-text outline-none w-full p-2 disabled:cursor-not-allowed"
               />
               <button
                 type="button"
+                disabled={saving}
                 onClick={() => removeReminder(idx)}
-                className="p-1 rounded-lg text-bento-muted hover:text-stryde-danger transition-all cursor-pointer"
+                className="p-1 rounded-lg text-bento-muted hover:text-stryde-danger transition-all cursor-pointer disabled:cursor-not-allowed"
                 aria-label="Remove reminder"
               >
                 <Trash2 className="w-3.5 h-3.5" />

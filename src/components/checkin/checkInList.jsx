@@ -25,7 +25,15 @@ export default function CheckInList({ habits, checkInMap, userId, today }) {
     });
     
     if (habits?.length) {
-      useAppStore.setState({ habits });
+      const currentStoreHabits = useAppStore.getState().habits;
+      if (currentStoreHabits.length === 0) {
+        useAppStore.setState({ habits });
+      } else {
+        const missingFromServer = habits.filter(ih => !currentStoreHabits.some(h => h.id === ih.id));
+        if (missingFromServer.length > 0) {
+          useAppStore.setState({ habits: [...currentStoreHabits, ...missingFromServer] });
+        }
+      }
     }
     useAppStore.setState({ todayCheckIns: initialMap });
   }, [checkInMap, habits]);

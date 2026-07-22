@@ -18,8 +18,14 @@ export default function DashboardClient({ userId, initialHabits, initialCheckedI
 
   // ── Seed Zustand on first mount only ────────────────────────────────────
   useEffect(() => {
-    if (habits.length === 0 && initialHabits?.length) {
+    if (!initialHabits) return;
+    if (habits.length === 0) {
       setHabits(initialHabits);
+    } else {
+      const missingFromServer = initialHabits.filter(ih => !habits.some(h => h.id === ih.id));
+      if (missingFromServer.length > 0) {
+        setHabits([...habits, ...missingFromServer]);
+      }
     }
 
     if (Object.keys(todayCheckIns).length === 0 && initialCheckedIds?.length) {
