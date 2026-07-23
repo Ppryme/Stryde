@@ -63,5 +63,15 @@ export function useHabit() {
     }
   };
 
-  return { createHabit, updateHabit, archiveHabit, saving, error, setError };
+  const unarchiveHabit = async (habitId) => {
+    try {
+      await HabitRepository.unarchiveHabit(habitId);
+      return true;
+    } catch (err) {
+      console.error("Failed to unarchive habit:", err);
+      return false;
+    }
+  };
+
+  return { createHabit, updateHabit, archiveHabit, unarchiveHabit, saving, error, setError };
 }

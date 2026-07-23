@@ -31,7 +31,7 @@ function HabitCard({ habit, userId, isChecked: initialChecked, onMilestone, isLo
   const hideLoading = useAppStore((state) => state.hideLoading);
   const showUndo = useAppStore((state) => state.showUndo);
   
-  const { updateHabit, archiveHabit } = useHabit();
+  const { updateHabit, archiveHabit, unarchiveHabit } = useHabit();
 
   const isChecked = todayCheckIns[habit.id] ?? initialChecked;
   const category = Object.values(HABIT_CATEGORIES).find((c) => c.id === habit.category);
@@ -101,26 +101,25 @@ function HabitCard({ habit, userId, isChecked: initialChecked, onMilestone, isLo
     const habitId = habit.id;
     const originalHabits = [...habits];
 
-    // Optimistically filter out from Zustand store
+    // 1. Optimistically update UI
     setHabits(habits.filter((h) => h.id !== habitId));
+    
+    // 2. Instantly update the database
+    await archiveHabit(habitId);
     hideLoading();
 
     showUndo(
       `Deleted "${habit.name}"`,
-      () => {
-        // Undo: Restore to Zustand store
+      async () => {
+        // Undo: Restore to DB and Zustand store
+        await unarchiveHabit(habitId);
         setHabits(originalHabits);
       },
-      async () => {
-        try {
-          // Dismiss: Permanently delete/archive
-          await archiveHabit(habitId);
-        } catch (err) {
-          console.error("Failed to delete habit:", err);
-        }
+      () => {
+        // Dismiss: Do nothing, it's already archived in the database
       }
     );
-  }, [habit.id, habit.name, habits, setHabits, showLoading, hideLoading, showUndo, archiveHabit]);
+  }, [habit.id, habit.name, habits, setHabits, showLoading, hideLoading, showUndo, archiveHabit, unarchiveHabit]);
 
   if (isEditing) {
     return (

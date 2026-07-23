@@ -4,6 +4,7 @@ import { create } from "zustand";
 const useAppStore = create((set) => ({
   user: null,
   habits: [],
+  hasSeededHabits: false,
   todayCheckIns: {},
   isOnline: true,
 
@@ -12,7 +13,7 @@ const useAppStore = create((set) => ({
   loadingMessage: "",
 
   setUser: (user) => set({ user }),
-  setHabits: (habits) => set({ habits }),
+  setHabits: (habits) => set({ habits, hasSeededHabits: true }),
 
   markCheckedIn: (habitId, completed) =>
     set((state) => ({

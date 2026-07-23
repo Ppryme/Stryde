@@ -74,11 +74,6 @@ export const HabitRepository = {
     }
   },
 
-  /**
-   * Archives a habit locally and syncs to Supabase.
-   * 
-   * @param {string} habitId 
-   */
   async archiveHabit(habitId) {
     await db.habits.update(habitId, { archived: true });
 
@@ -88,6 +83,26 @@ export const HabitRepository = {
     } else {
       await db.queue.add({
         type: "ARCHIVE_HABIT",
+        payload: { habitId },
+        createdAt: new Date().toISOString(),
+      });
+    }
+  },
+
+  /**
+   * Unarchives a habit locally and syncs to Supabase.
+   * 
+   * @param {string} habitId 
+   */
+  async unarchiveHabit(habitId) {
+    await db.habits.update(habitId, { archived: false });
+
+    if (navigator.onLine) {
+      const supabase = getSupabase();
+      await supabase.from("habits").update({ archived: false }).eq("id", habitId);
+    } else {
+      await db.queue.add({
+        type: "UNARCHIVE_HABIT",
         payload: { habitId },
         createdAt: new Date().toISOString(),
       });

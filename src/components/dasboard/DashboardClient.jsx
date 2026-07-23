@@ -18,26 +18,21 @@ export default function DashboardClient({ userId, initialHabits, initialCheckedI
 
   // ── Seed Zustand on first mount only ────────────────────────────────────
   useEffect(() => {
-    if (!initialHabits) return;
-    if (habits.length === 0) {
+    const hasSeededHabits = useAppStore.getState().hasSeededHabits;
+    if (!hasSeededHabits && initialHabits?.length) {
       setHabits(initialHabits);
-    } else {
-      const missingFromServer = initialHabits.filter(ih => !habits.some(h => h.id === ih.id));
-      if (missingFromServer.length > 0) {
-        setHabits([...habits, ...missingFromServer]);
-      }
     }
 
-    if (Object.keys(todayCheckIns).length === 0 && initialCheckedIds?.length) {
+    const currentCheckIns = useAppStore.getState().todayCheckIns;
+    if (Object.keys(currentCheckIns).length === 0 && initialCheckedIds?.length) {
       const initialMap = {};
       initialHabits.forEach((h) => {
         initialMap[h.id] = initialCheckedIds.includes(h.id);
       });
       useAppStore.setState({ todayCheckIns: initialMap });
     }
-  // We deliberately run only on mount — store mutations are handled internally.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // We deliberately run only when initialHabits/initialCheckedIds change
+  }, [initialHabits, initialCheckedIds, setHabits]);
 
   // ── Page-visit cache (skeleton loader suppression) ───────────────────────
   useEffect(() => {

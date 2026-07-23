@@ -19,23 +19,21 @@ export default function CheckInList({ habits, checkInMap, userId, today }) {
 
   // Initialize Zustand with current DB values on mount
   useEffect(() => {
-    const initialMap = {};
-    Object.keys(checkInMap).forEach((id) => {
-      initialMap[id] = checkInMap[id].completed;
-    });
+    const currentCheckIns = useAppStore.getState().todayCheckIns;
+    if (Object.keys(currentCheckIns).length === 0) {
+      const initialMap = {};
+      Object.keys(checkInMap).forEach((id) => {
+        initialMap[id] = checkInMap[id].completed;
+      });
+      useAppStore.setState({ todayCheckIns: initialMap });
+    }
     
     if (habits?.length) {
-      const currentStoreHabits = useAppStore.getState().habits;
-      if (currentStoreHabits.length === 0) {
-        useAppStore.setState({ habits });
-      } else {
-        const missingFromServer = habits.filter(ih => !currentStoreHabits.some(h => h.id === ih.id));
-        if (missingFromServer.length > 0) {
-          useAppStore.setState({ habits: [...currentStoreHabits, ...missingFromServer] });
-        }
+      const hasSeededHabits = useAppStore.getState().hasSeededHabits;
+      if (!hasSeededHabits) {
+        useAppStore.setState({ habits, hasSeededHabits: true });
       }
     }
-    useAppStore.setState({ todayCheckIns: initialMap });
   }, [checkInMap, habits]);
 
   // Page Load Cache logic

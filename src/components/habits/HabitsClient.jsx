@@ -11,16 +11,11 @@ export default function HabitsClient({ initialHabits, userId, initialCheckedIds 
   const todayCheckIns = useAppStore((state) => state.todayCheckIns);
 
   useEffect(() => {
-    if (!initialHabits) return;
-    if (habits.length === 0) {
+    const hasSeededHabits = useAppStore.getState().hasSeededHabits;
+    if (!hasSeededHabits && initialHabits) {
       setHabits(initialHabits);
-    } else {
-      const missingFromServer = initialHabits.filter(ih => !habits.some(h => h.id === ih.id));
-      if (missingFromServer.length > 0) {
-        setHabits([...habits, ...missingFromServer]);
-      }
     }
-  }, [initialHabits, habits, setHabits]);
+  }, [initialHabits, setHabits]);
 
   const currentHabits = habits.length > 0 ? habits : initialHabits;
   const activeHabits = currentHabits.filter((h) => !h.archived);
