@@ -1,8 +1,6 @@
 "use client";
 
 import { useState, useEffect, memo, useCallback } from "react";
-import { db } from "@/lib/db";
-import { getSupabase } from "@/lib/supabase";
 import { StreakRepository } from "@/repositories/streakRepository";
 import { HABIT_CATEGORIES } from "@/lib/design-token";
 import { CheckCircle2, Edit2, Trash2, Bell } from "lucide-react";
@@ -35,6 +33,8 @@ function HabitCard({ habit, userId, isChecked: initialChecked, onMilestone, isLo
   const todayCheckIns = useAppStore((state) => state.todayCheckIns);
   const markCheckedIn = useAppStore((state) => state.markCheckedIn);
   const showUndo = useAppStore((state) => state.showUndo);
+  const showLoading = useAppStore((state) => state.showLoading);
+  const hideLoading = useAppStore((state) => state.hideLoading);
 
   const { updateHabit, archiveHabit, unarchiveHabit } = useHabit();
 
@@ -235,6 +235,7 @@ function HabitCard({ habit, userId, isChecked: initialChecked, onMilestone, isLo
   const reminderList = (habit.reminder_time || habit.reminderTime || "").split(",").filter(Boolean);
 
   return (
+    <>
     <div
       data-checked={isChecked}
       data-pressing={pressing}
@@ -306,6 +307,11 @@ function HabitCard({ habit, userId, isChecked: initialChecked, onMilestone, isLo
         ) : null}
       </button>
     </div>
+
+
+    </>
+    
+   
   );
 }
 

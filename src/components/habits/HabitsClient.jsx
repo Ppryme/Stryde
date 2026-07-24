@@ -8,16 +8,18 @@ import EmptyState from "@/components/ui/EmptyState";
 export default function HabitsClient({ initialHabits, userId, initialCheckedIds }) {
   const habits = useAppStore((state) => state.habits);
   const setHabits = useAppStore((state) => state.setHabits);
+   const hasSeededHabits = useAppStore((state) => state.hasSeededHabits);
   const todayCheckIns = useAppStore((state) => state.todayCheckIns);
 
   useEffect(() => {
-    const hasSeededHabits = useAppStore.getState().hasSeededHabits;
+    
     if (!hasSeededHabits && initialHabits) {
       setHabits(initialHabits);
     }
-  }, [initialHabits, setHabits]);
+  }, [initialHabits, setHabits, hasSeededHabits]);
 
-  const currentHabits = habits.length > 0 ? habits : initialHabits;
+ // Use Zustand store if seeded, otherwise fallback to server props
+  const currentHabits = hasSeededHabits ? habits : (initialHabits ?? []);
   const activeHabits = currentHabits.filter((h) => !h.archived);
 
   return (

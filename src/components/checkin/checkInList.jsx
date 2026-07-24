@@ -11,6 +11,9 @@ export default function CheckInList({ habits, checkInMap, userId, today }) {
   const markCheckedIn = useAppStore((state) => state.markCheckedIn);
   const storeHabits = useAppStore((state) => state.habits);
   const showMilestone = useAppStore((state) => state.showMilestone);
+   const hasSeededHabits = useAppStore((state) => state.hasSeededHabits);
+   
+ 
 
   const celebrationOpen = useAppStore((state) => state.celebrationOpen);
   const setOpenCelebration = useAppStore((state) => state.setOpenCelebration);
@@ -36,6 +39,10 @@ export default function CheckInList({ habits, checkInMap, userId, today }) {
     }
   }, [checkInMap, habits]);
 
+
+  
+
+
   // Page Load Cache logic
   const markPageVisited = useAppStore((state) => state.markPageVisited);
   useEffect(() => {
@@ -43,10 +50,8 @@ export default function CheckInList({ habits, checkInMap, userId, today }) {
   }, [markPageVisited]);
 
   // Read habits from Zustand store (if populated), filtering out archived habits
-  const activeHabits = storeHabits.length > 0 
-    ? storeHabits.filter((h) => !h.archived) 
-    : (habits?.filter((h) => !h.archived) ?? []);
-
+  const currentHabits = hasSeededHabits ? storeHabits : (habits ?? []);
+  const activeHabits = currentHabits.filter((h) => !h.archived);
   const totalHabits = activeHabits.length;
   const completedCount = activeHabits.filter((habit) => !!todayCheckIns[habit.id]).length;
   const percentage = totalHabits > 0 ? Math.round((completedCount / totalHabits) * 100) : 0;

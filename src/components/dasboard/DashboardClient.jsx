@@ -15,10 +15,11 @@ export default function DashboardClient({ userId, initialHabits, initialCheckedI
   const setOpenCelebration    = useAppStore((state) => state.setOpenCelebration);
   const celebratedTodayCount  = useAppStore((state) => state.celebratedTodayCount);
   const setCelebratedTodayCount = useAppStore((state) => state.setCelebratedTodayCount);
+   const hasSeededHabits = useAppStore((state) => state.hasSeededHabits);
 
   // ── Seed Zustand on first mount only ────────────────────────────────────
   useEffect(() => {
-    const hasSeededHabits = useAppStore.getState().hasSeededHabits;
+
     if (!hasSeededHabits && initialHabits?.length) {
       setHabits(initialHabits);
     }
@@ -32,7 +33,7 @@ export default function DashboardClient({ userId, initialHabits, initialCheckedI
       useAppStore.setState({ todayCheckIns: initialMap });
     }
   // We deliberately run only when initialHabits/initialCheckedIds change
-  }, [initialHabits, initialCheckedIds, setHabits]);
+  }, [initialHabits, initialCheckedIds, setHabits, hasSeededHabits]);
 
   // ── Page-visit cache (skeleton loader suppression) ───────────────────────
   useEffect(() => {
@@ -46,11 +47,14 @@ export default function DashboardClient({ userId, initialHabits, initialCheckedI
   );
 
   // ── Derived display values ────────────────────────────────────────────────
-  const currentHabits = habits.length > 0 ? habits : initialHabits;
+ 
 
   const dailyHabits = useMemo(
-    () => currentHabits.filter((h) => h.frequency === "daily" && !h.archived),
-    [currentHabits]
+    () => {
+      const currentHabits = hasSeededHabits ? habits : (initialHabits ?? []);
+      return currentHabits.filter((h) => h.frequency === "daily" && !h.archived);
+    },
+    [hasSeededHabits, habits, initialHabits]
   );
 
   const totalHabits = dailyHabits.length;
@@ -136,8 +140,13 @@ export default function DashboardClient({ userId, initialHabits, initialCheckedI
                 isChecked={getIsChecked(habit.id)}
                 isLocked={isLocked}
               />
+              
             ))}
+          <div className="flex justify-center">
+          {isLocked && (<p className="text-bento-muted/90"> { totalHabits == 1  ? "Task" : ` Tasks`} Completed, Come back and Check in Tomorrow</p>)}
           </div>
+          </div>
+          
         )}
       </section>
     </div>
