@@ -24,11 +24,9 @@ function CheckInCard({ habit, userId, today, isChecked, onToggle, onMilestone, i
   // Hook into Zustand store to handle editing & deleting the habit
   const habits = useAppStore((state) => state.habits);
   const setHabits = useAppStore((state) => state.setHabits);
-  const showLoading = useAppStore((state) => state.showLoading);
-  const hideLoading = useAppStore((state) => state.hideLoading);
   const showUndo = useAppStore((state) => state.showUndo);
 
-  const { updateHabit, archiveHabit } = useHabit();
+  const { updateHabit, archiveHabit, unarchiveHabit } = useHabit();
 
   const handleTap = useCallback(async () => {
     if (isLocked) return; // Do nothing if locked (all checked off for the day)
@@ -88,30 +86,27 @@ function CheckInCard({ habit, userId, today, isChecked, onToggle, onMilestone, i
   const handleDelete = useCallback(async (e) => {
     if (e) e.stopPropagation();
 
-    showLoading("Deleting habit...");
     const habitId = habit.id;
     const originalHabits = [...habits];
 
-    // Optimistically filter out from Zustand store
+    // 1. Optimistically remove from UI immediately
     setHabits(habits.filter((h) => h.id !== habitId));
-    hideLoading();
+
+    // 2. Archive in DB immediately — don't wait for Undo to time out
+    await archiveHabit(habitId);
 
     showUndo(
       `Deleted "${habit.name}"`,
-      () => {
-        // Undo: Restore to Zustand store
+      async () => {
+        // Undo: Restore in DB first, then restore UI
+        await unarchiveHabit(habitId);
         setHabits(originalHabits);
       },
-      async () => {
-        try {
-          // Dismiss: Permanently delete/archive
-          await archiveHabit(habitId);
-        } catch (err) {
-          console.error("Failed to delete habit:", err);
-        }
+      () => {
+        // Dismiss: Already archived, nothing more to do
       }
     );
-  }, [habit.id, habit.name, habits, setHabits, showLoading, hideLoading, showUndo, archiveHabit]);
+  }, [habit.id, habit.name, habits, setHabits, showUndo, archiveHabit, unarchiveHabit]);
 
   if (isEditing) {
     return (
@@ -228,7 +223,7 @@ function CheckInCard({ habit, userId, today, isChecked, onToggle, onMilestone, i
       onClick={handleTap}
       data-checked={isChecked}
       data-pressing={pressing}
-      className={`group/card w-full min-h-[72px] flex items-center gap-4 px-5 py-4 rounded-2xl border text-left transition-all bg-bento-card border-bento-border ${
+      className={`group w-full min-h-[72px] flex items-center gap-4 px-5 py-4 rounded-2xl border text-left transition-all bg-bento-card border-bento-border ${
         isLocked
           ? "cursor-default opacity-85"
           : "cursor-pointer hover:border-bento-border/80 data-pressing:scale-[0.97]"
@@ -265,7 +260,7 @@ function CheckInCard({ habit, userId, today, isChecked, onToggle, onMilestone, i
 
       {/* Action buttons (Edit & Delete) - Hidden if check-in is complete (isLocked) */}
       {!isLocked && (
-        <div className="flex items-center gap-1 opacity-0 group-hover/card:opacity-100 md:opacity-0 max-md:opacity-75 transition-opacity duration-150 mr-1 flex-shrink-0">
+        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 md:opacity-0 max-md:opacity-75 transition-opacity duration-150 mr-1 flex-shrink-0">
           <button
             onClick={(e) => {
               e.stopPropagation();
@@ -287,7 +282,7 @@ function CheckInCard({ habit, userId, today, isChecked, onToggle, onMilestone, i
       )}
 
       {!isChecked && !isLocked && (
-        <span className="text-xs flex-shrink-0 text-bento-muted group-hover/card:hidden">
+        <span className="text-xs flex-shrink-0 text-bento-muted group-hover:hidden">
           Tap to complete
         </span>
       )}

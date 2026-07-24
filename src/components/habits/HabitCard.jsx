@@ -16,21 +16,26 @@ function HabitCard({ habit, userId, isChecked: initialChecked, onMilestone, isLo
   const [isEditing, setIsEditing] = useState(false);
   
   // Inline edit state variables
-  const [editName, setEditName] = useState(() => habit.name);
-  const [editFrequency, setEditFrequency] = useState(() => habit.frequency || "daily");
+  const [editName, setEditName] = useState(habit.name);
+  const [editFrequency, setEditFrequency] = useState(habit.frequency || "daily");
   const [editReminders, setEditReminders] = useState(() =>
     (habit.reminder_time || habit.reminderTime || "").split(",").filter(Boolean)
   );
+
+  // Sync edit state variables if parent habit updates
+  useEffect(() => {
+    setEditName(habit.name);
+    setEditFrequency(habit.frequency || "daily");
+    setEditReminders((habit.reminder_time || habit.reminderTime || "").split(",").filter(Boolean));
+  }, [habit]);
 
   // Hook into Zustand store
   const habits = useAppStore((state) => state.habits);
   const setHabits = useAppStore((state) => state.setHabits);
   const todayCheckIns = useAppStore((state) => state.todayCheckIns);
   const markCheckedIn = useAppStore((state) => state.markCheckedIn);
-  const showLoading = useAppStore((state) => state.showLoading);
-  const hideLoading = useAppStore((state) => state.hideLoading);
   const showUndo = useAppStore((state) => state.showUndo);
-  
+
   const { updateHabit, archiveHabit, unarchiveHabit } = useHabit();
 
   const isChecked = todayCheckIns[habit.id] ?? initialChecked;
@@ -97,29 +102,27 @@ function HabitCard({ habit, userId, isChecked: initialChecked, onMilestone, isLo
   const handleDelete = useCallback(async (e) => {
     if (e) e.stopPropagation();
 
-    showLoading("Deleting habit...");
     const habitId = habit.id;
     const originalHabits = [...habits];
 
-    // 1. Optimistically update UI
+    // 1. Optimistically remove from UI immediately
     setHabits(habits.filter((h) => h.id !== habitId));
-    
-    // 2. Instantly update the database
+
+    // 2. Archive in DB immediately — don't wait for Undo to time out
     await archiveHabit(habitId);
-    hideLoading();
 
     showUndo(
       `Deleted "${habit.name}"`,
       async () => {
-        // Undo: Restore to DB and Zustand store
+        // Undo: Restore in DB first, then restore UI
         await unarchiveHabit(habitId);
         setHabits(originalHabits);
       },
       () => {
-        // Dismiss: Do nothing, it's already archived in the database
+        // Dismiss: Already archived, nothing more to do
       }
     );
-  }, [habit.id, habit.name, habits, setHabits, showLoading, hideLoading, showUndo, archiveHabit, unarchiveHabit]);
+  }, [habit.id, habit.name, habits, setHabits, showUndo, archiveHabit, unarchiveHabit]);
 
   if (isEditing) {
     return (
@@ -236,7 +239,7 @@ function HabitCard({ habit, userId, isChecked: initialChecked, onMilestone, isLo
       data-checked={isChecked}
       data-pressing={pressing}
       onClick={handleToggle}
-      className={`group/card flex items-center gap-3 px-4 py-3 rounded-2xl border bg-bento-card border-bento-border transition-all w-full min-h-[66px] ${
+      className={`group flex items-center gap-3 px-4 py-3 rounded-2xl border bg-bento-card border-bento-border transition-all w-full min-h-[66px] ${
         isLocked
           ? "cursor-default opacity-85"
           : "cursor-pointer hover:border-bento-border/80 data-pressing:scale-[0.98]"
@@ -257,7 +260,7 @@ function HabitCard({ habit, userId, isChecked: initialChecked, onMilestone, isLo
           </p>
           {reminderList.length > 0 && (
             <div className="flex items-center gap-1 text-[10px] text-bento-muted flex-wrap">
-              <Bell className="w-3 h-3 text-bento-muted flex-shrink-0" />
+              <Bell className="w-3 h-3 text-green-500 flex-shrink-0" />
               <span>{reminderList.join(" · ")}</span>
             </div>
           )}
@@ -266,23 +269,23 @@ function HabitCard({ habit, userId, isChecked: initialChecked, onMilestone, isLo
 
       {/* Action buttons (Edit & Delete) - Hidden if check-in is complete (isLocked) */}
       {!isLocked && (
-        <div className="flex items-center gap-1 opacity-0 group-hover/card:opacity-100 md:opacity-0 max-md:opacity-75 transition-opacity duration-150 mr-1 flex-shrink-0">
+        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 md:opacity-0 max-md:opacity-75 transition-opacity duration-150 mr-1 flex-shrink-0">
           <button
             onClick={(e) => {
               e.stopPropagation();
               setIsEditing(true);
             }}
-            className="p-1.5 rounded-lg text-bento-muted hover:text-stryde-primary hover:bg-bento-border transition-colors"
+            className="p-1.5 rounded-lg text-bento-muted hover:text-white hover:bg-bento-border transition-colors"
             aria-label="Edit habit"
           >
             <Edit2 className="w-3.5 h-3.5" />
           </button>
           <button
             onClick={handleDelete}
-            className="p-1.5 rounded-lg text-bento-muted hover:text-stryde-danger hover:bg-bento-border transition-colors"
+            className="p-1.5 rounded-lg text-white hover:text-white hover:bg-bento-border transition-colors"
             aria-label="Delete habit"
           >
-            <Trash2 className="w-3.5 h-3.5" />
+            <Trash2 className="w-3.5 h-3.5 text-white" />
           </button>
         </div>
       )}
