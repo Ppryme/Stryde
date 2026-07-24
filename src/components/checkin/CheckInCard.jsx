@@ -25,6 +25,8 @@ function CheckInCard({ habit, userId, today, isChecked, onToggle, onMilestone, i
   const habits = useAppStore((state) => state.habits);
   const setHabits = useAppStore((state) => state.setHabits);
   const showUndo = useAppStore((state) => state.showUndo);
+  const showLoading = useAppStore((state) => state.showLoading);
+  const hideLoading = useAppStore((state) => state.hideLoading);
 
   const { updateHabit, archiveHabit, unarchiveHabit } = useHabit();
 

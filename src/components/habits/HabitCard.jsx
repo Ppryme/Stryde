@@ -268,8 +268,8 @@ function HabitCard({ habit, userId, isChecked: initialChecked, onMilestone, isLo
         </div>
       </div>
 
-      {/* Action buttons (Edit & Delete) - Hidden if check-in is complete (isLocked) */}
-      {!isLocked && (
+      {/* Action buttons (Edit & Delete) */}
+      
         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 max-md:opacity-75 transition-opacity duration-150 mr-1 flex-shrink-0">
           <button
             onClick={(e) => {
@@ -289,7 +289,7 @@ function HabitCard({ habit, userId, isChecked: initialChecked, onMilestone, isLo
             <Trash2 className="w-3.5 h-3.5 text-white" />
           </button>
         </div>
-      )}
+   
 
       <button
         onClick={handleToggle}
