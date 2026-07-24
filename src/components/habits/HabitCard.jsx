@@ -97,7 +97,7 @@ function HabitCard({ habit, userId, isChecked: initialChecked, onMilestone, isLo
     } finally {
       hideLoading();
     }
-  }, [editName, editFrequency, editReminders, habit.id, habits, setHabits, showLoading, hideLoading, updateHabit]);
+  }, [editName, editFrequency, editReminders, habit.id, habits, setHabits, updateHabit]);
 
   const handleDelete = useCallback(async (e) => {
     if (e) e.stopPropagation();
