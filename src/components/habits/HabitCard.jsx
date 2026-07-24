@@ -269,7 +269,7 @@ function HabitCard({ habit, userId, isChecked: initialChecked, onMilestone, isLo
 
       {/* Action buttons (Edit & Delete) - Hidden if check-in is complete (isLocked) */}
       {!isLocked && (
-        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 md:opacity-0 max-md:opacity-75 transition-opacity duration-150 mr-1 flex-shrink-0">
+        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 max-md:opacity-75 transition-opacity duration-150 mr-1 flex-shrink-0">
           <button
             onClick={(e) => {
               e.stopPropagation();

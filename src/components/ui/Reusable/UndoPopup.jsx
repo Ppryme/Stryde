@@ -15,10 +15,12 @@ export default function UndoPopup() {
       
       // Auto-dismiss after 5 seconds
       timerRef.current = setTimeout(() => {
-        if (undoAction.onDismiss) {
-          undoAction.onDismiss().catch(console.error);
+        try {
+          const result = undoAction.onDismiss?.();
+          if (result instanceof Promise) result.catch(console.error);
+        } finally {
+          clearUndo();
         }
-        clearUndo();
       }, 5000);
     }
 
@@ -39,10 +41,12 @@ export default function UndoPopup() {
   const handleClose = (e) => {
     e.stopPropagation();
     if (timerRef.current) clearTimeout(timerRef.current);
-    if (undoAction.onDismiss) {
-      undoAction.onDismiss().catch(console.error);
+    try {
+      const result = undoAction.onDismiss?.();
+      if (result instanceof Promise) result.catch(console.error);
+    } finally {
+      clearUndo();
     }
-    clearUndo();
   };
 
   return (
