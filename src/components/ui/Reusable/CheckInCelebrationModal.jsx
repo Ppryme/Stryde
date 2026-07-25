@@ -21,7 +21,7 @@ export default function CheckInCelebrationModal() {
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           {/* Modal Card */}
           <motion.div
             initial={{ scale: 0.9, opacity: 0, y: 20 }}
