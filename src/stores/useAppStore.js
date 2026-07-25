@@ -16,12 +16,36 @@ const useAppStore = create((set) => ({
   setHabits: (habits) => set({ habits, hasSeededHabits: true }),
 
   markCheckedIn: (habitId, completed) =>
-    set((state) => ({
-      todayCheckIns: {
-        ...state.todayCheckIns,
+    set((state) => {
+      const prevCheckIns = state.todayCheckIns;
+      const newCheckIns = {
+        ...prevCheckIns,
         [habitId]: completed,
-      },
-    })),
+      };
+
+      const activeDailyHabits = state.habits.filter(
+        (h) => (h.frequency === "daily" || !h.frequency) && !h.archived
+      );
+      const totalHabits = activeDailyHabits.length;
+
+      if (totalHabits > 0 && completed) {
+        const prevCompletedCount = activeDailyHabits.filter(
+          (h) => !!prevCheckIns[h.id]
+        ).length;
+        const newCompletedCount = activeDailyHabits.filter(
+          (h) => !!newCheckIns[h.id]
+        ).length;
+
+        if (prevCompletedCount < totalHabits && newCompletedCount === totalHabits) {
+          return {
+            todayCheckIns: newCheckIns,
+            celebrationOpen: true,
+          };
+        }
+      }
+
+      return { todayCheckIns: newCheckIns };
+    }),
 
   setOnline: (isOnline) => set({ isOnline }),
 

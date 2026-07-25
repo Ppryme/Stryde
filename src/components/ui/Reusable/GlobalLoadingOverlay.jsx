@@ -7,6 +7,8 @@ export default function GlobalLoadingOverlay() {
   const loading = useAppStore((state) => state.loading);
   const message = useAppStore((state) => state.loadingMessage);
 
+
+
   if (!loading) return null;
 
   return (

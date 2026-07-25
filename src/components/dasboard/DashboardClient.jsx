@@ -12,10 +12,7 @@ export default function DashboardClient({ userId, initialHabits, initialCheckedI
   const todayCheckIns     = useAppStore((state) => state.todayCheckIns);
   const setHabits         = useAppStore((state) => state.setHabits);
   const markPageVisited   = useAppStore((state) => state.markPageVisited);
-  const setOpenCelebration    = useAppStore((state) => state.setOpenCelebration);
-  const celebratedTodayCount  = useAppStore((state) => state.celebratedTodayCount);
-  const setCelebratedTodayCount = useAppStore((state) => state.setCelebratedTodayCount);
-   const hasSeededHabits = useAppStore((state) => state.hasSeededHabits);
+  const hasSeededHabits   = useAppStore((state) => state.hasSeededHabits);
 
   // ── Seed Zustand on first mount only ────────────────────────────────────
   useEffect(() => {
@@ -65,21 +62,6 @@ export default function DashboardClient({ userId, initialHabits, initialCheckedI
   );
 
   const isLocked = totalHabits > 0 && completedCount === totalHabits;
-
-  // ── Celebration modal trigger ────────────────────────────────────────────
-  // We track `celebratedTodayCount` so re-renders don't re-open the modal
-  // when the count hasn't actually changed (prevents double-firing).
-  useEffect(() => {
-    if (totalHabits > 0 && completedCount === totalHabits) {
-      if (celebratedTodayCount !== totalHabits) {
-        setOpenCelebration(true);
-        setCelebratedTodayCount(totalHabits);
-      }
-    } else if (completedCount < totalHabits && celebratedTodayCount > 0) {
-      // A new habit was added — reset so the modal will fire again once complete.
-      setCelebratedTodayCount(0);
-    }
-  }, [completedCount, totalHabits, celebratedTodayCount, setOpenCelebration, setCelebratedTodayCount]);
 
   // ── Stable isChecked resolver (avoids anonymous fn in map) ───────────────
   const getIsChecked = useCallback(

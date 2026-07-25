@@ -15,11 +15,6 @@ export default function CheckInList({ habits, checkInMap, userId, today }) {
    
  
 
-  const celebrationOpen = useAppStore((state) => state.celebrationOpen);
-  const setOpenCelebration = useAppStore((state) => state.setOpenCelebration);
-  const celebratedTodayCount = useAppStore((state) => state.celebratedTodayCount);
-  const setCelebratedTodayCount = useAppStore((state) => state.setCelebratedTodayCount);
-
   // Initialize Zustand with current DB values on mount
   useEffect(() => {
     const currentCheckIns = useAppStore.getState().todayCheckIns;
@@ -39,10 +34,6 @@ export default function CheckInList({ habits, checkInMap, userId, today }) {
     }
   }, [checkInMap, habits]);
 
-
-  
-
-
   // Page Load Cache logic
   const markPageVisited = useAppStore((state) => state.markPageVisited);
   useEffect(() => {
@@ -57,20 +48,6 @@ export default function CheckInList({ habits, checkInMap, userId, today }) {
   const percentage = totalHabits > 0 ? Math.round((completedCount / totalHabits) * 100) : 0;
 
   const isLocked = totalHabits > 0 && completedCount === totalHabits;
-
-  // Trigger celebration modal
-  useEffect(() => {
-    if (totalHabits > 0 && completedCount === totalHabits) {
-      if (celebratedTodayCount !== totalHabits) {
-        setOpenCelebration(true);
-        setCelebratedTodayCount(totalHabits);
-      }
-    } else if (completedCount < totalHabits) {
-      if (celebratedTodayCount > 0) {
-        setCelebratedTodayCount(0);
-      }
-    }
-  }, [completedCount, totalHabits, celebratedTodayCount, setOpenCelebration, setCelebratedTodayCount]);
 
   function handleToggle(habitId, completed) {
     markCheckedIn(habitId, completed);

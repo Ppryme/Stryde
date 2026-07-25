@@ -10,13 +10,17 @@ export default function CheckInCelebrationModal() {
   const setOpen = useAppStore((state) => state.setOpenCelebration);
 
   // Auto-dismiss modal after 8 seconds
-  useEffect(() => {
+ 
+useEffect(() => {
     if (!isOpen) return;
+
     const timer = setTimeout(() => {
-      setOpen(false);
+        setOpen(false);
     }, 8000);
+
     return () => clearTimeout(timer);
-  }, [isOpen, setOpen]);
+}, [isOpen, setOpen]);
+
 
   return (
     <AnimatePresence>
