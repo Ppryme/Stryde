@@ -5,6 +5,9 @@ import DashboardClient from "@/components/dasboard/DashboardClient";
 import GoalCard from "@/components/goals/GoalCard";
 import SignOutButton from "@/components/ui/Reusable/SignOutButton";
 
+// Always render fresh — goals and check-ins change frequently
+export const dynamic = "force-dynamic";
+
 export default async function DashboardHome() {
   const supabase = await createClient();
   const {

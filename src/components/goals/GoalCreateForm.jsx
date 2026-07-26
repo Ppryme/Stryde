@@ -1,8 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { useGoal } from "@/hooks/useGoal";
+import { useState, useTransition } from "react";
+import { createGoalAction } from "@/app/actions/goalActions";
 import Button from "@/components/ui/button";
 import FormError from "@/components/ui/FormError";
 import FormLabel from "@/components/ui/FormLabel";
@@ -12,13 +11,15 @@ import { Plus, Trash2 } from "lucide-react";
 import { getLocalDateString } from "@/lib/date";
 
 export default function GoalCreateForm({ userId }) {
-  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
   const [title, setTitle] = useState("");
   const [tasks, setTasks] = useState([{ id: "init-0", name: "" }]);
   const [reminders, setReminders] = useState(["08:00"]);
   const [targetDate, setTargetDate] = useState("");
+  const [error, setError] = useState("");
 
-  const { createGoal, saving, error, setError } = useGoal();
+  const showLoading = useAppStore((state) => state.showLoading);
+  const hideLoading = useAppStore((state) => state.hideLoading);
 
   function addTask() {
     setTasks([...tasks, { id: `task-${Date.now()}-${Math.random()}`, name: "" }]);
@@ -51,7 +52,7 @@ export default function GoalCreateForm({ userId }) {
   }
 
   async function handleSave() {
-    if (saving) return;
+    if (isPending) return;
 
     if (!title.trim()) {
       setError("Give your goal a title.");
@@ -77,36 +78,45 @@ export default function GoalCreateForm({ userId }) {
 
     setError("");
 
-    try {
-      const finalTasks = validTasks.map((t, idx) => ({
-        id: t.id.startsWith("init") ? `task-${Date.now()}-${idx}` : t.id,
-        name: t.name.trim(),
-      }));
+    const finalTasks = validTasks.map((t, idx) => ({
+      id: t.id.startsWith("init") ? `task-${Date.now()}-${idx}` : t.id,
+      name: t.name.trim(),
+    }));
 
-      const goalPayload = JSON.stringify({
-        tasks: finalTasks,
-        reminders: reminders.filter((r) => r.trim() !== ""),
-        completion_history: {},
-        created_at_date: todayStr,
-        finished_date: null,
-      });
+    const goalPayload = JSON.stringify({
+      tasks: finalTasks,
+      reminders: reminders.filter((r) => r.trim() !== ""),
+      completion_history: {},
+      created_at_date: todayStr,
+      finished_date: null,
+    });
 
-      const success = await createGoal({
-        user_id: userId,
-        title: title.trim(),
-        description: goalPayload,
-        target_date: targetDate,
-        progress_pct: 0,
-        status: "active",
-      });
+    showLoading("Saving goal...");
 
-      if (!success) return;
-
-      router.refresh();
-      router.push("/goals");
-    } catch (err) {
-      console.error(err);
-    }
+    startTransition(async () => {
+      try {
+        const result = await createGoalAction({
+          user_id: userId,
+          title: title.trim(),
+          description: goalPayload,
+          target_date: targetDate,
+          progress_pct: 0,
+          status: "active",
+        });
+        // createGoalAction redirects on success; only reaches here on error
+        if (result?.error) {
+          setError(result.error);
+        }
+      } catch (err) {
+        // redirect() throws a special Next.js error — rethrow it
+        // so Next.js can handle the navigation; only catch real errors.
+        if (err?.digest?.startsWith("NEXT_REDIRECT")) throw err;
+        console.error(err);
+        setError("Failed to save goal. Please try again.");
+      } finally {
+        hideLoading();
+      }
+    });
   }
 
   return (
@@ -236,10 +246,10 @@ export default function GoalCreateForm({ userId }) {
       {/* Save Button */}
       <Button
         onClick={handleSave}
-        disabled={saving}
+        disabled={isPending}
         className="w-full py-4 rounded-xl text-sm"
       >
-        {saving ? "Saving..." : "Save Goal"}
+        {isPending ? "Saving..." : "Save Goal"}
       </Button>
     </div>
   );
