@@ -91,8 +91,16 @@ export default function CheckInList({ habits, checkInMap, userId, today }) {
               onMilestone={handleMilestone}
               isLocked={isLocked}
             />
+
+            
           );
         })}
+
+          <div className="flex justify-center">
+          {isLocked && (<p className="text-bento-muted/90"> { totalHabits == 1  ? "Task" : ` Tasks`} Completed, Come back and Check in Tomorrow</p>)}
+          </div>
+          
+        
       </div>
 
       {/* Floating Add Habit Button */}
