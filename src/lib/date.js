@@ -23,3 +23,16 @@ export function getGreeting() {
   if (hour < 17) return "Good afternoon";
   return "Good evening";
 }
+
+export function formatDisplayDate(dateInput) {
+  if (!dateInput) return "";
+  const str = typeof dateInput === "string" && dateInput.length === 10 ? `${dateInput}T00:00:00` : dateInput;
+  const d = new Date(str);
+  if (isNaN(d.getTime())) return String(dateInput);
+  return d.toLocaleDateString("en-US", {
+    month: "numeric",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+

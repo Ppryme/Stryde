@@ -12,7 +12,7 @@ import {
   calculateProgress,
   getDaysDifference,
 } from "@/lib/goalUtils";
-import { getLocalDateString } from "@/lib/date";
+import { getLocalDateString, formatDisplayDate } from "@/lib/date";
 import {
   ChevronDown,
   ChevronUp,
@@ -631,9 +631,9 @@ function GoalCard({ goal }) {
       {/* History details */}
       {localGoal.status !== "active" && (
         <div className="mt-3 pt-3 border-t border-bento-border/30 grid grid-cols-2 gap-2 text-[11px] text-bento-muted">
-          <span>Target Date: {new Date(localGoal.target_date).toLocaleDateString()}</span>
+          <span suppressHydrationWarning>Target Date: {formatDisplayDate(localGoal.target_date)}</span>
           {localGoal.created_at && (
-            <span>Created: {new Date(localGoal.created_at).toLocaleDateString()}</span>
+            <span suppressHydrationWarning>Created: {formatDisplayDate(localGoal.created_at)}</span>
           )}
         </div>
       )}
