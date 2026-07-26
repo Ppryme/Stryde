@@ -97,7 +97,7 @@ export default function CheckInList({ habits, checkInMap, userId, today }) {
         })}
 
           <div className="flex justify-center">
-          {isLocked && (<p className="text-bento-muted/90 sm:text-base text-sm"> { totalHabits == 1  ? "Task" : ` Tasks`} Completed, Come back and Check in Tomorrow</p>)}
+          {isLocked && (<p className="text-bento-muted/90 sm:text-base text-[12px]"> { totalHabits == 1  ? "Task" : ` Tasks`} Completed, Come back and Check in Tomorrow</p>)}
           </div>
           
         
