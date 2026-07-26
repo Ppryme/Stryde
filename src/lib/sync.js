@@ -59,6 +59,19 @@ export async function syncQueue() {
         );
       }
 
+      if (item.type === 'UPSERT_USER_STREAK') {
+        await supabase.from('user_streaks').upsert(
+          {
+            user_id:             item.payload.userId,
+            current_streak:      item.payload.currentStreak,
+            longest_streak:      item.payload.longestStreak,
+            last_completed_date: item.payload.lastCompletedDate,
+            updated_at:          item.payload.updatedAt,
+          },
+          { onConflict: 'user_id' }
+        );
+      }
+
       // Remove from queue on success
       await db.queue.delete(item.id);
     } catch (err) {

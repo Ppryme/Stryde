@@ -64,19 +64,19 @@ export function getStreak(history, tasksLength, createdDate) {
 
 export function calculateProgress(goal) {
   const { tasks, completionHistory, createdAtDate } = parseGoal(goal);
-  const tasksPerDay = tasks.length;
-  if (tasksPerDay === 0) return 0;
+  const tasksLength = tasks.length;
+  if (tasksLength === 0) return 0;
 
-  const totalDays = Math.max(1, getDaysDifference(createdAtDate, goal.target_date));
-  const maxCompletions = totalDays * tasksPerDay;
+  // Inclusive total days (creation date through target date)
+  const totalDays = Math.max(1, getDaysDifference(createdAtDate, goal.target_date) + 1);
 
-  let totalCompleted = 0;
-  Object.values(completionHistory).forEach((list) => {
-    totalCompleted += list.length;
-  });
+  // A day counts as 1 completed day ONLY when ALL tasks for that day are checked off
+  const completedDaysCount = Object.keys(completionHistory).filter((date) => {
+    return (completionHistory[date] ?? []).length === tasksLength;
+  }).length;
 
-  return maxCompletions > 0 
-    ? Math.min(100, Math.round((totalCompleted / maxCompletions) * 100)) 
+  return totalDays > 0 
+    ? Math.min(100, Math.round((completedDaysCount / totalDays) * 100)) 
     : 0;
 }
 
@@ -98,15 +98,17 @@ export function calculateSuccessRate(goal) {
 }
 
 export function evaluateGoalStatus(goal) {
-  if (goal.status !== "active") return goal.status;
+  if (goal.status === "archived") return "archived";
+
+  const progress = calculateProgress(goal);
+  if (progress >= 100) {
+    return "completed";
+  }
 
   const todayStr = getLocalDateString();
-  // Target date has arrived or passed (deadline reached)
+  // Target date has passed without reaching 100%
   if (goal.target_date < todayStr) {
-    const progress = calculateProgress(goal);
-    if (progress >= 100) {
-      return "completed";
-    } else if (progress >= 70) {
+    if (progress >= 70) {
       return "almost-there";
     } else {
       return "missed";

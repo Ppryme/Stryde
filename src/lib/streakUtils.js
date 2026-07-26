@@ -113,3 +113,33 @@ export function computeOverallStreakFromCheckIns(checkIns, habits) {
   return { currentStreak, longestStreak };
 }
 
+// ─────────────────────────────────────────────
+// computeMissedDayPenalty
+// Pure helper — computes updated streak count based on missed days.
+//
+// Rules:
+//   • If lastCompletedDate is null → no change
+//   • Gap of 0 (today) or 1 (yesterday) → no change
+//   • Gap >= 2 → missed (gap - 1) days, subtract from currentStreak (floor 0)
+//
+// @param lastCompletedDate  string YYYY-MM-DD or null
+// @param today              string YYYY-MM-DD
+// @param currentStreak      number
+// @returns                  number — updated streak count
+// ─────────────────────────────────────────────
+export function computeMissedDayPenalty(lastCompletedDate, today, currentStreak) {
+  if (!lastCompletedDate || currentStreak <= 0) return Math.max(0, currentStreak || 0);
+
+  const d1 = new Date(`${lastCompletedDate}T00:00:00`);
+  const d2 = new Date(`${today}T00:00:00`);
+  const gap = Math.round((d2 - d1) / 86_400_000);
+
+  if (gap <= 1) {
+    return currentStreak;
+  }
+
+  const missedDays = gap - 1;
+  return Math.max(0, currentStreak - missedDays);
+}
+
+

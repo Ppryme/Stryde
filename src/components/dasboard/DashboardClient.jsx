@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useCallback } from "react";
+import { useEffect, useMemo, useCallback, useState } from "react";
 import useAppStore from "@/stores/useAppStore";
 import ProgressRing from "@/components/ui/ProgressRing";
 import StreakBadge from "@/components/streaks/StreakBadge";
 import HabitCard from "@/components/habits/HabitCard";
 import EmptyState from "@/components/ui/EmptyState";
+import { UserStreakRepository } from "@/repositories/userStreakRepository";
 
 export default function DashboardClient({ userId, initialHabits, initialCheckedIds }) {
   const habits            = useAppStore((state) => state.habits);
@@ -13,6 +14,7 @@ export default function DashboardClient({ userId, initialHabits, initialCheckedI
   const setHabits         = useAppStore((state) => state.setHabits);
   const markPageVisited   = useAppStore((state) => state.markPageVisited);
   const hasSeededHabits   = useAppStore((state) => state.hasSeededHabits);
+  const [streakVersion, setStreakVersion] = useState(0);
 
   // ── Seed Zustand on first mount only ────────────────────────────────────
   useEffect(() => {
@@ -32,10 +34,15 @@ export default function DashboardClient({ userId, initialHabits, initialCheckedI
   // We deliberately run only when initialHabits/initialCheckedIds change
   }, [initialHabits, initialCheckedIds, setHabits, hasSeededHabits]);
 
-  // ── Page-visit cache (skeleton loader suppression) ───────────────────────
+  // ── Page-visit cache & missed day streak penalty ──────────────────────────
   useEffect(() => {
     markPageVisited("/dashboard");
-  }, [markPageVisited]);
+    if (userId) {
+      UserStreakRepository.applyMissedDayPenalty(userId).then(() => {
+        setStreakVersion((v) => v + 1);
+      });
+    }
+  }, [markPageVisited, userId]);
 
   // ── Stable set for O(1) "was this habit checked?" lookups ───────────────
   const initialCheckedSet = useMemo(
@@ -63,6 +70,15 @@ export default function DashboardClient({ userId, initialHabits, initialCheckedI
 
   const isLocked = totalHabits > 0 && completedCount === totalHabits;
 
+  // ── Trigger persistent streak update on day completion ───────────────────
+  useEffect(() => {
+    if (isLocked && userId) {
+      UserStreakRepository.onDayCompleted(userId).then(() => {
+        setStreakVersion((v) => v + 1);
+      });
+    }
+  }, [isLocked, userId]);
+
   // ── Stable isChecked resolver (avoids anonymous fn in map) ───────────────
   const getIsChecked = useCallback(
     (habitId) => todayCheckIns[habitId] ?? initialCheckedSet.has(habitId),
@@ -81,8 +97,8 @@ export default function DashboardClient({ userId, initialHabits, initialCheckedI
               {completedCount}/{totalHabits} done
             </p>
           </div>
-          {/* trigger re-fetches streak whenever completed count changes */}
-          <StreakBadge userId={userId} trigger={completedCount} />
+          {/* trigger re-fetches streak whenever completed count or streak version changes */}
+          <StreakBadge userId={userId} trigger={`${completedCount}_${streakVersion}`} />
         </div>
       </div>
 

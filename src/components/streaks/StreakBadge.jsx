@@ -14,6 +14,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { StreakRepository } from "@/repositories/streakRepository";
+import { UserStreakRepository } from "@/repositories/userStreakRepository";
 import { Flame } from "lucide-react";
 
 export default function StreakBadge({ habitId, userId, trigger }) {
@@ -30,7 +31,7 @@ export default function StreakBadge({ habitId, userId, trigger }) {
       if (habitId) {
         value = await StreakRepository.getHabitStreak(habitId);
       } else if (userId) {
-        value = await StreakRepository.getOverallStreak(userId);
+        value = await UserStreakRepository.get(userId);
       }
 
       if (!cancelled) setStreak(value);

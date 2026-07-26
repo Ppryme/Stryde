@@ -33,4 +33,13 @@ db.version(2).stores({
   ]);
 });
 
+db.version(3).stores({
+  habits:      "++id, userId, frequency, archived",
+  goals:       "++id, userId, status",
+  checkIns:    "++id, [userId+date], habitId, date, synced",
+  streaks:     "++id, &habitId",
+  userStreaks: "++id, &userId",
+  queue:       "++id, type, createdAt",
+});
+
 export default db;

@@ -9,6 +9,7 @@ import {
   parseGoal,
   getStreak,
   evaluateGoalStatus,
+  calculateProgress,
   getDaysDifference,
 } from "@/lib/goalUtils";
 import { getLocalDateString } from "@/lib/date";
@@ -16,12 +17,16 @@ import {
   ChevronDown,
   ChevronUp,
   Calendar,
+  Clock,
   Flame,
   CheckCircle2,
   RotateCcw,
   Archive,
   ArrowRight,
   Trash2,
+  Pencil,
+  Plus,
+  X,
 } from "lucide-react";
 
 const STATUS_VARIANT = {
@@ -47,134 +52,259 @@ function GoalCard({ goal }) {
 
   const { updateGoal, deleteGoal } = useGoal();
 
+  // Local goal state for smooth, instant optimistic updates
+  const [localGoal, setLocalGoal] = useState(goal);
+  useEffect(() => {
+    setLocalGoal(goal);
+  }, [goal]);
+
   const [expanded, setExpanded] = useState(false);
   const [extending, setExtending] = useState(false);
   const [newTargetDate, setNewTargetDate] = useState("");
   const [error, setError] = useState("");
 
+  // Edit Mode state
+  const [isEditing, setIsEditing] = useState(false);
+  const [editTitle, setEditTitle] = useState("");
+  const [editTargetDate, setEditTargetDate] = useState("");
+  const [editTasks, setEditTasks] = useState([]);
+  const [editReminders, setEditReminders] = useState([]);
+  const [editError, setEditError] = useState("");
+  const [savingEdit, setSavingEdit] = useState(false);
+
   const todayStr = getLocalDateString();
 
-  // Memoize parsed goal data — parseGoal returns new object references every render,
-  // so we must stabilise on goal.id + goal.description (both are primitive strings).
+  // Memoize parsed goal data based on localGoal.id and localGoal.description
   const parsedGoal = useMemo(
-    () => parseGoal(goal),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [goal.id, goal.description]
+    () => parseGoal(localGoal),
+    [localGoal.id, localGoal.description]
   );
-  const { tasks, completionHistory, createdAtDate } = parsedGoal;
+  const { tasks, reminders, completionHistory, createdAtDate } = parsedGoal;
 
-  // Local state for optimistic checklist updates.
-  // Initialised once from the memoized value; synced back only when the
-  // server description actually changes (goal.description is a stable string).
+  // Local state for optimistic checklist updates
   const [localHistory, setLocalHistory] = useState(completionHistory);
 
   useEffect(() => {
     setLocalHistory(completionHistory);
-    // Only re-sync when the server sends a new description (string comparison —
-    // no infinite loop from object identity).
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [goal.description]);
+  }, [localGoal.description]);
 
   const todayCompletions = localHistory[todayStr] ?? [];
   const completedTodayCount = todayCompletions.length;
   const totalTasksCount = tasks.length;
 
-  const daysRemaining = Math.max(0, getDaysDifference(todayStr, goal.target_date));
+  const totalDays = Math.max(1, getDaysDifference(createdAtDate, localGoal.target_date) + 1);
+  const completedDaysCount = Object.keys(localHistory).filter(
+    (d) => (localHistory[d] ?? []).length === totalTasksCount && totalTasksCount > 0
+  ).length;
+
+  const daysRemaining = Math.max(0, getDaysDifference(todayStr, localGoal.target_date));
   const streak = getStreak(localHistory, totalTasksCount, createdAtDate);
 
-  // Auto-evaluation hook — runs only when the goal's status or deadline actually
-  // changes. Keyed on PRIMITIVE props so we never re-fire just because the parent
-  // re-rendered and passed a new goal object reference (which would cause an
-  // infinite loop via router.refresh() → re-render → new goal ref → effect again).
+  // Auto-evaluate goal status when deadline or completion changes
   useEffect(() => {
-    async function evaluateStatus() {
-      if (goal.status !== "active") return;
+    async function autoEvaluate() {
+      if (localGoal.status === "archived") return;
+      const evaluated = evaluateGoalStatus(localGoal);
+      if (evaluated !== localGoal.status) {
+        setLocalGoal((prev) => ({ ...prev, status: evaluated }));
+        await updateGoal(localGoal.id, { status: evaluated });
+      }
+    }
+    autoEvaluate();
+  }, [localGoal.id, localGoal.status, localGoal.target_date, localGoal.description, updateGoal]);
+
+  // Toggle task completion without collapsing the card
+  const toggleTask = useCallback(
+    async (taskId, e) => {
+      if (e) e.stopPropagation();
+
+      let newDayCompletions = [];
+      if (todayCompletions.includes(taskId)) {
+        newDayCompletions = todayCompletions.filter((id) => id !== taskId);
+      } else {
+        newDayCompletions = [...todayCompletions, taskId];
+      }
+
+      const newHistory = {
+        ...localHistory,
+        [todayStr]: newDayCompletions,
+      };
+
+      const newDescription = JSON.stringify({
+        tasks,
+        reminders,
+        completion_history: newHistory,
+        created_at_date: createdAtDate,
+        finished_date: null,
+      });
+
+      const tempGoal = { ...localGoal, description: newDescription };
+      const newProgress = calculateProgress(tempGoal);
+      const newStatus = evaluateGoalStatus({ ...tempGoal, progress_pct: newProgress });
+
+      // Optimistically update local state immediately
+      setLocalHistory(newHistory);
+      setLocalGoal((prev) => ({
+        ...prev,
+        description: newDescription,
+        progress_pct: newProgress,
+        status: newStatus,
+      }));
+
       try {
-        const evaluated = evaluateGoalStatus(goal);
-        if (evaluated !== goal.status) {
-          await updateGoal(goal.id, { status: evaluated });
+        await updateGoal(localGoal.id, {
+          description: newDescription,
+          progress_pct: newProgress,
+          status: newStatus,
+        });
+      } catch (err) {
+        console.error("Failed to toggle goal task:", err);
+        setLocalHistory(completionHistory);
+      }
+    },
+    [todayCompletions, localHistory, todayStr, tasks, reminders, createdAtDate, localGoal, updateGoal, completionHistory]
+  );
+
+  const handleDelete = useCallback(
+    async (e) => {
+      if (e) e.stopPropagation();
+      if (!confirm("Are you sure you want to delete this goal? This cannot be undone.")) return;
+
+      showLoading("Deleting goal...");
+      try {
+        const success = await deleteGoal(localGoal.id);
+        if (!success) {
+          alert("Failed to delete goal. Try again.");
+        } else {
           router.refresh();
         }
       } catch (err) {
-        console.error("Failed to auto-evaluate goal status:", err);
+        console.error("Failed to delete goal:", err);
+      } finally {
+        hideLoading();
       }
-    }
-    evaluateStatus();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [goal.id, goal.status, goal.target_date]);
+    },
+    [localGoal.id, router, showLoading, hideLoading, deleteGoal]
+  );
 
-  const toggleTask = useCallback(async (taskId, e) => {
+  // Enter Edit Mode
+  const startEditing = useCallback(
+    (e) => {
+      if (e) e.stopPropagation();
+      const parsed = parseGoal(localGoal);
+      setEditTitle(localGoal.title);
+      setEditTargetDate(localGoal.target_date);
+      setEditTasks(parsed.tasks.map((t) => ({ ...t })));
+      setEditReminders([...parsed.reminders]);
+      setEditError("");
+      setIsEditing(true);
+    },
+    [localGoal]
+  );
+
+  // Edit Handlers for Task & Reminders
+  const addEditTask = () => {
+    setEditTasks([...editTasks, { id: `task-${Date.now()}-${Math.random()}`, name: "" }]);
+  };
+
+  const removeEditTask = (id) => {
+    if (editTasks.length === 1) {
+      setEditError("A goal must have at least one task.");
+      return;
+    }
+    setEditTasks(editTasks.filter((t) => t.id !== id));
+    setEditError("");
+  };
+
+  const updateEditTaskName = (id, val) => {
+    setEditTasks(editTasks.map((t) => (t.id === id ? { ...t, name: val } : t)));
+    setEditError("");
+  };
+
+  const addEditReminder = () => {
+    setEditReminders([...editReminders, "08:00"]);
+  };
+
+  const removeEditReminder = (idx) => {
+    setEditReminders(editReminders.filter((_, i) => i !== idx));
+  };
+
+  const updateEditReminder = (idx, val) => {
+    setEditReminders(editReminders.map((r, i) => (i === idx ? val : r)));
+  };
+
+  // Save Edits
+  const handleSaveEdit = async (e) => {
     if (e) e.stopPropagation();
 
-    let newDayCompletions = [];
-    if (todayCompletions.includes(taskId)) {
-      newDayCompletions = todayCompletions.filter((id) => id !== taskId);
-    } else {
-      newDayCompletions = [...todayCompletions, taskId];
+    if (!editTitle.trim()) {
+      setEditError("Please enter a goal title.");
+      return;
     }
 
-    const newHistory = {
-      ...localHistory,
-      [todayStr]: newDayCompletions,
-    };
+    const validTasks = editTasks.filter((t) => t.name.trim() !== "");
+    if (validTasks.length === 0) {
+      setEditError("Add at least one goal task.");
+      return;
+    }
 
-    // Optimistically update the UI instantly
-    setLocalHistory(newHistory);
+    if (!editTargetDate) {
+      setEditError("Target date is required.");
+      return;
+    }
 
-    const tasksPerDay = tasks.length;
-    const totalDays = Math.max(1, getDaysDifference(createdAtDate, goal.target_date));
-    const maxCompletions = totalDays * tasksPerDay;
-
-    let totalCompleted = 0;
-    Object.values(newHistory).forEach((list) => {
-      totalCompleted += list.length;
-    });
-
-    const newProgress = maxCompletions > 0 
-      ? Math.min(100, Math.round((totalCompleted / maxCompletions) * 100)) 
-      : 0;
-
-    const newDescription = JSON.stringify({
-      tasks,
-      reminders: parseGoal(goal).reminders,
-      completion_history: newHistory,
-      created_at_date: createdAtDate,
-      finished_date: null,
-    });
+    setSavingEdit(true);
+    setEditError("");
 
     try {
-      await updateGoal(goal.id, {
-        description: newDescription,
-        progress_pct: newProgress,
+      const finalTasks = validTasks.map((t, idx) => ({
+        id: t.id ? t.id : `task-${Date.now()}-${idx}`,
+        name: t.name.trim(),
+      }));
+
+      const newDescription = JSON.stringify({
+        tasks: finalTasks,
+        reminders: editReminders.filter((r) => r.trim() !== ""),
+        completion_history: localHistory,
+        created_at_date: createdAtDate,
+        finished_date: null,
       });
 
-      router.refresh();
+      const tempGoal = {
+        ...localGoal,
+        title: editTitle.trim(),
+        target_date: editTargetDate,
+        description: newDescription,
+      };
+
+      const newProgress = calculateProgress(tempGoal);
+      const newStatus = evaluateGoalStatus({ ...tempGoal, progress_pct: newProgress });
+
+      await updateGoal(localGoal.id, {
+        title: editTitle.trim(),
+        target_date: editTargetDate,
+        description: newDescription,
+        progress_pct: newProgress,
+        status: newStatus,
+      });
+
+      setLocalGoal((prev) => ({
+        ...prev,
+        title: editTitle.trim(),
+        target_date: editTargetDate,
+        description: newDescription,
+        progress_pct: newProgress,
+        status: newStatus,
+      }));
+
+      setIsEditing(false);
     } catch (err) {
-      console.error("Failed to toggle goal task:", err);
-      // Revert on error
-      setLocalHistory(completionHistory);
-    }
-  }, [todayCompletions, localHistory, todayStr, tasks, createdAtDate, goal, router, completionHistory]);
-
-  const handleDelete = useCallback(async (e) => {
-    if (e) e.stopPropagation();
-    if (!confirm("Are you sure you want to delete this goal? This cannot be undone.")) return;
-
-    showLoading("Deleting goal...");
-    try {
-      const success = await deleteGoal(goal.id);
-
-      if (!success) {
-        alert("Failed to delete goal. Try again.");
-      } else {
-        router.refresh();
-      }
-    } catch (err) {
-      console.error("Failed to delete goal:", err);
+      console.error("Failed to save goal edits:", err);
+      setEditError("Failed to save updates. Please try again.");
     } finally {
-      hideLoading();
+      setSavingEdit(false);
     }
-  }, [goal.id, router, showLoading, hideLoading]);
+  };
 
   const handleSaveExtension = useCallback(async () => {
     if (!newTargetDate) return;
@@ -187,16 +317,25 @@ function GoalCard({ goal }) {
     setError("");
 
     try {
-      const success = await updateGoal(goal.id, {
+      const tempGoal = { ...localGoal, target_date: newTargetDate, status: "active" };
+      const newProgress = calculateProgress(tempGoal);
+
+      const success = await updateGoal(localGoal.id, {
         target_date: newTargetDate,
+        progress_pct: newProgress,
         status: "active",
       });
 
       if (!success) {
         setError("Failed to extend deadline.");
       } else {
+        setLocalGoal((prev) => ({
+          ...prev,
+          target_date: newTargetDate,
+          progress_pct: newProgress,
+          status: "active",
+        }));
         setExtending(false);
-        router.refresh();
       }
     } catch (err) {
       console.error("Error extending target date:", err);
@@ -204,75 +343,228 @@ function GoalCard({ goal }) {
     } finally {
       hideLoading();
     }
-  }, [newTargetDate, todayStr, goal.id, router, showLoading, hideLoading]);
+  }, [newTargetDate, todayStr, localGoal, updateGoal, showLoading, hideLoading]);
 
   const handleRestart = useCallback(async () => {
-    if (!confirm("Are you sure you want to restart this goal? This will reset all statistics and task completion history.")) return;
+    if (!confirm("Restart this goal? All task completion history will be reset.")) return;
 
     showLoading("Restarting goal...");
-    const { tasks, reminders } = parseGoal(goal);
+    const { tasks: currentTasks, reminders: currentReminders } = parseGoal(localGoal);
 
     const newDescription = JSON.stringify({
-      tasks,
-      reminders,
+      tasks: currentTasks,
+      reminders: currentReminders,
       completion_history: {},
       created_at_date: todayStr,
       finished_date: null,
     });
 
     try {
-      await updateGoal(goal.id, {
+      await updateGoal(localGoal.id, {
         description: newDescription,
         progress_pct: 0,
         status: "active",
       });
 
-      router.refresh();
+      setLocalGoal((prev) => ({
+        ...prev,
+        description: newDescription,
+        progress_pct: 0,
+        status: "active",
+      }));
+      setLocalHistory({});
     } catch (err) {
       console.error("Failed to restart goal:", err);
     } finally {
       hideLoading();
     }
-  }, [goal, todayStr, router, showLoading, hideLoading]);
+  }, [localGoal, todayStr, updateGoal, showLoading, hideLoading]);
 
   const handleArchive = useCallback(async () => {
-    if (!confirm("Archive this goal? It will be moved to history and will no longer show as active.")) return;
+    if (!confirm("Archive this goal? It will be moved to history.")) return;
 
     try {
-      await updateGoal(goal.id, { status: "archived" });
-
-      router.refresh();
+      await updateGoal(localGoal.id, { status: "archived" });
+      setLocalGoal((prev) => ({ ...prev, status: "archived" }));
     } catch (err) {
       console.error("Failed to archive goal:", err);
     } finally {
       hideLoading();
     }
-  }, [goal.id, router, hideLoading]);
+  }, [localGoal.id, updateGoal, hideLoading]);
 
-  const variant = STATUS_VARIANT[goal.status] ?? "info";
-  const label = STATUS_LABEL[goal.status] ?? goal.status;
+  const variant = STATUS_VARIANT[localGoal.status] ?? "info";
+  const label = STATUS_LABEL[localGoal.status] ?? localGoal.status;
+
+  // Render Inline Edit Mode Form
+  if (isEditing) {
+    return (
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="p-5 rounded-2xl bg-bento-card border border-stryde-primary/50 shadow-lg flex flex-col gap-4 animate-fadeIn"
+      >
+        <div className="flex items-center justify-between border-b border-bento-border/50 pb-2">
+          <h3 className="text-sm font-bold text-bento-text flex items-center gap-2">
+            <Pencil className="w-4 h-4 text-stryde-primary" /> Edit Goal
+          </h3>
+          <button
+            onClick={() => setIsEditing(false)}
+            className="p-1 rounded-lg text-bento-muted hover:bg-bento-border transition-colors"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Title & Target Date */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label className="text-[11px] font-semibold text-bento-muted uppercase tracking-wider block mb-1">
+              Goal Title
+            </label>
+            <input
+              type="text"
+              value={editTitle}
+              onChange={(e) => setEditTitle(e.target.value)}
+              className="w-full px-3 py-2 text-sm rounded-xl bg-bento-bg border border-bento-border text-bento-text outline-none focus:border-stryde-primary transition-all"
+            />
+          </div>
+
+          <div>
+            <label className="text-[11px] font-semibold text-bento-muted uppercase tracking-wider block mb-1">
+              Target Date
+            </label>
+            <input
+              type="date"
+              value={editTargetDate}
+              onChange={(e) => setEditTargetDate(e.target.value)}
+              className="w-full px-3 py-2 text-sm rounded-xl bg-bento-bg border border-bento-border text-bento-text outline-none focus:border-stryde-primary transition-all"
+            />
+          </div>
+        </div>
+
+        {/* Goal Tasks Editor */}
+        <div className="p-3.5 rounded-xl bg-bento-bg border border-bento-border/60">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-bento-muted">
+              Goal Tasks
+            </span>
+            <button
+              type="button"
+              onClick={addEditTask}
+              className="p-1 rounded-md bg-bento-card border border-bento-border text-bento-muted hover:text-stryde-primary transition-all text-xs flex items-center gap-1"
+            >
+              <Plus className="w-3.5 h-3.5" /> Add Task
+            </button>
+          </div>
+          <div className="flex flex-col gap-2">
+            {editTasks.map((t) => (
+              <div key={t.id} className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={t.name}
+                  onChange={(e) => updateEditTaskName(t.id, e.target.value)}
+                  className="flex-1 px-3 py-1.5 text-xs rounded-lg bg-bento-card border border-bento-border text-bento-text outline-none focus:border-stryde-primary"
+                />
+                <button
+                  type="button"
+                  onClick={() => removeEditTask(t.id)}
+                  className="p-1.5 text-bento-muted hover:text-stryde-danger transition-colors"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Goal Reminders Editor */}
+        <div className="p-3.5 rounded-xl bg-bento-bg border border-bento-border/60">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-bento-muted">
+              Reminder Times
+            </span>
+            <button
+              type="button"
+              onClick={addEditReminder}
+              className="p-1 rounded-md bg-bento-card border border-bento-border text-bento-muted hover:text-stryde-primary transition-all text-xs flex items-center gap-1"
+            >
+              <Plus className="w-3.5 h-3.5" /> Add Time
+            </button>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            {editReminders.map((time, idx) => (
+              <div key={idx} className="flex items-center gap-1.5 bg-bento-card border border-bento-border rounded-lg px-2 py-1">
+                <input
+                  type="time"
+                  value={time}
+                  onChange={(e) => updateEditReminder(idx, e.target.value)}
+                  className="bg-transparent text-xs text-bento-text outline-none w-full"
+                />
+                <button
+                  type="button"
+                  onClick={() => removeEditReminder(idx)}
+                  className="p-1 text-bento-muted hover:text-stryde-danger transition-colors"
+                >
+                  <Trash2 className="w-3 h-3" />
+                </button>
+              </div>
+            ))}
+            {editReminders.length === 0 && (
+              <span className="text-xs text-bento-muted col-span-full py-1">No reminders configured.</span>
+            )}
+          </div>
+        </div>
+
+        {editError && <p className="text-xs text-stryde-danger font-medium">{editError}</p>}
+
+        <div className="flex justify-end gap-2 pt-2 border-t border-bento-border/50">
+          <button
+            type="button"
+            onClick={() => setIsEditing(false)}
+            className="px-4 py-2 rounded-xl text-xs font-medium border border-bento-border text-bento-muted hover:bg-bento-border transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={handleSaveEdit}
+            disabled={savingEdit}
+            className="px-4 py-2 rounded-xl text-xs font-semibold bg-stryde-primary text-white hover:bg-stryde-primary-dark transition-colors disabled:opacity-50"
+          >
+            {savingEdit ? "Saving..." : "Save Changes"}
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
       onClick={() => {
-        if (goal.status === "active") setExpanded((prev) => !prev);
+        if (localGoal.status === "active") setExpanded((prev) => !prev);
       }}
       className={`p-4 rounded-2xl bg-bento-card border transition-all duration-200 select-none ${
-        goal.status === "active" ? "cursor-pointer hover:border-bento-border/80" : "border-bento-border/50"
+        localGoal.status === "active" ? "cursor-pointer hover:border-bento-border/80" : "border-bento-border/50"
       } border-bento-border`}
     >
-      {/* Top Header */}
+      {/* Header */}
       <div className="flex items-start justify-between gap-3 mb-2">
         <div className="min-w-0">
           <p className="text-sm font-bold text-bento-text truncate">
-            {goal.title}
+            {localGoal.title}
           </p>
-          {goal.status === "active" && (
-            <p className="text-[10px] text-bento-muted mt-0.5 flex items-center gap-1">
+          <div className="flex flex-wrap items-center gap-3 mt-1 text-[11px] text-bento-muted">
+            <span className="flex items-center gap-1">
               <Calendar className="w-3 h-3 text-bento-muted" />
               {daysRemaining > 0 ? `${daysRemaining} days remaining` : "Deadline today"}
-            </p>
-          )}
+            </span>
+            {reminders && reminders.length > 0 && (
+              <span className="flex items-center gap-1 text-stryde-primary/90 font-medium">
+                <Clock className="w-3 h-3 text-stryde-primary" />
+                {reminders.join(", ")}
+              </span>
+            )}
+          </div>
         </div>
 
         <div className="flex items-center gap-2 flex-shrink-0">
@@ -280,13 +572,22 @@ function GoalCard({ goal }) {
             {label}
           </Badge>
           <button
+            onClick={startEditing}
+            className="p-1.5 rounded-lg text-bento-muted hover:text-stryde-primary hover:bg-bento-border transition-colors cursor-pointer"
+            aria-label="Edit goal"
+            title="Edit Goal"
+          >
+            <Pencil className="w-4 h-4" />
+          </button>
+          <button
             onClick={handleDelete}
             className="p-1.5 rounded-lg text-bento-muted hover:text-stryde-danger hover:bg-bento-border transition-colors cursor-pointer"
             aria-label="Delete goal"
+            title="Delete Goal"
           >
             <Trash2 className="w-4 h-4" />
           </button>
-          {goal.status === "active" && (
+          {localGoal.status === "active" && (
             <span className="text-bento-muted">
               {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
             </span>
@@ -296,24 +597,26 @@ function GoalCard({ goal }) {
 
       {/* Progress Bar & percentage */}
       <div className="my-3">
-        <div className="h-1.5 rounded-full overflow-hidden bg-bento-border">
+        <div className="h-2 rounded-full overflow-hidden bg-bento-border">
           <div
             className={`h-full rounded-full transition-all duration-500 ${
-              goal.status === "missed" ? "bg-stryde-danger" : "bg-stryde-primary"
+              localGoal.status === "missed"
+                ? "bg-stryde-danger"
+                : localGoal.status === "completed"
+                ? "bg-stryde-success"
+                : "bg-stryde-primary"
             }`}
-            style={{ width: `${goal.progress_pct ?? 0}%` }}
+            style={{ width: `${localGoal.progress_pct ?? 0}%` }}
           />
         </div>
-        <div className="flex items-center justify-between text-[11px] text-bento-muted mt-1.5">
-          <span>{goal.progress_pct ?? 0}% complete</span>
-          {goal.status === "active" && totalTasksCount > 0 && (
-            <span>{completedTodayCount} / {totalTasksCount} tasks today</span>
-          )}
+        <div className="flex items-center justify-between text-[11px] text-bento-muted mt-1.5 font-medium">
+          <span>{localGoal.progress_pct ?? 0}% complete</span>
+          <span>{completedDaysCount} / {totalDays} days completed</span>
         </div>
       </div>
 
-      {/* Daily Metrics (Streak Only, Success Rate Removed) */}
-      {goal.status === "active" && (
+      {/* Daily Metrics */}
+      {localGoal.status === "active" && (
         <div className="flex items-center justify-between mt-3 pt-3 border-t border-bento-border/30 text-xs">
           <div className="flex items-center gap-1.5 text-bento-text">
             <Flame className="w-4 h-4 text-stryde-fire" />
@@ -326,22 +629,25 @@ function GoalCard({ goal }) {
       )}
 
       {/* History details */}
-      {goal.status !== "active" && (
+      {localGoal.status !== "active" && (
         <div className="mt-3 pt-3 border-t border-bento-border/30 grid grid-cols-2 gap-2 text-[11px] text-bento-muted">
-          <span>Target Date: {new Date(goal.target_date).toLocaleDateString()}</span>
-          {goal.created_at && (
-            <span>Created: {new Date(goal.created_at).toLocaleDateString()}</span>
+          <span>Target Date: {new Date(localGoal.target_date).toLocaleDateString()}</span>
+          {localGoal.created_at && (
+            <span>Created: {new Date(localGoal.created_at).toLocaleDateString()}</span>
           )}
         </div>
       )}
 
       {/* Accordion checklist when expanded */}
-      {goal.status === "active" && expanded && (
+      {localGoal.status === "active" && expanded && (
         <div
           onClick={(e) => e.stopPropagation()}
           className="mt-4 pt-3 border-t border-bento-border/40 flex flex-col gap-2.5 animate-fadeIn"
         >
-          <p className="text-[10px] uppercase tracking-wider font-semibold text-bento-muted">Today&apos;s Checklist</p>
+          <div className="flex items-center justify-between text-[10px] uppercase tracking-wider font-semibold text-bento-muted">
+            <span>Today&apos;s Checklist</span>
+            <span>{completedTodayCount} / {totalTasksCount} tasks today</span>
+          </div>
           <div className="flex flex-col gap-2">
             {tasks.map((task) => {
               const checked = todayCompletions.includes(task.id);
@@ -372,7 +678,7 @@ function GoalCard({ goal }) {
       )}
 
       {/* Show more/less toggle text at the bottom */}
-      {goal.status === "active" && (
+      {localGoal.status === "active" && (
         <div className="flex justify-center mt-2 pt-2 border-t border-bento-border/30">
           <span className="text-xs font-semibold text-stryde-primary flex items-center gap-1 hover:underline cursor-pointer">
             {expanded ? "Show less" : "Show more"}
@@ -381,7 +687,7 @@ function GoalCard({ goal }) {
       )}
 
       {/* Remediation actions */}
-      {goal.status === "almost-there" && (
+      {localGoal.status === "almost-there" && (
         <div
           onClick={(e) => e.stopPropagation()}
           className="mt-4 pt-3 border-t border-bento-border/40 flex flex-col gap-2"
@@ -402,7 +708,7 @@ function GoalCard({ goal }) {
       )}
 
       {/* Missed goals remediation actions */}
-      {goal.status === "missed" && (
+      {localGoal.status === "missed" && (
         <div
           onClick={(e) => e.stopPropagation()}
           className="mt-4 pt-3 border-t border-bento-border/40 flex flex-col gap-2"
