@@ -40,7 +40,7 @@ export default async function DashboardHome() {
     .select("*")
     .eq("user_id", user.id)
     .eq("status", "active")
-    .limit(2);
+    .order("created_at", { ascending: false });
 
   return (
     <div className="px-4 pt-10 pb-6 flex flex-col gap-6 mx-auto max-w-6xl sm:px-6 lg:px-8">

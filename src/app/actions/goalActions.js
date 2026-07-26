@@ -23,8 +23,8 @@ export async function createGoalAction(payload) {
   }
 
   // Bust the server-side RSC cache for both pages that display goals
-  revalidatePath("/dashboard");
-  revalidatePath("/goals");
+  revalidatePath("/dashboard", "page");
+  revalidatePath("/goals", "page");
 
   // redirect() throws internally — must be called outside try/catch
   redirect("/goals");
