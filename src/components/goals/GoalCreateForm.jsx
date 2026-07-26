@@ -102,6 +102,7 @@ export default function GoalCreateForm({ userId }) {
 
       if (!success) return;
 
+      router.refresh();
       router.push("/goals");
     } catch (err) {
       console.error(err);

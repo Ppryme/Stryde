@@ -46,7 +46,7 @@ export default function StreakBadge({ habitId, userId, trigger }) {
   if (streak === null) return null;
 
   return (
-    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium flex-shrink-0 bg-stryde-fire-light text-stryde-fire-dark">
+    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium shrink-0 bg-stryde-fire-light text-stryde-fire-dark">
       <Flame className="w-3.5 h-3.5" aria-hidden="true" />
       {streak}
     </span>
