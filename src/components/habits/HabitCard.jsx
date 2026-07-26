@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, memo, useCallback } from "react";
+import { useState, memo, useCallback } from "react";
 import { StreakRepository } from "@/repositories/streakRepository";
 import { HABIT_CATEGORIES } from "@/lib/design-token";
 import { CheckCircle2, Edit2, Trash2, Bell } from "lucide-react";
@@ -21,11 +21,7 @@ function HabitCard({ habit, userId, isChecked: initialChecked, onMilestone, isLo
   );
 
   // Sync edit state variables if parent habit updates
-  useEffect(() => {
-    setEditName(habit.name);
-    setEditFrequency(habit.frequency || "daily");
-    setEditReminders((habit.reminder_time || habit.reminderTime || "").split(",").filter(Boolean));
-  }, [habit]);
+  // (done in the edit button handler to avoid setState-in-effect warnings)
 
   // Hook into Zustand store
   const habits = useAppStore((state) => state.habits);
@@ -97,7 +93,7 @@ function HabitCard({ habit, userId, isChecked: initialChecked, onMilestone, isLo
     } finally {
       hideLoading();
     }
-  }, [editName, editFrequency, editReminders, habit.id, habits, setHabits, updateHabit]);
+  }, [editName, editFrequency, editReminders, habit.id, habits, setHabits, updateHabit, hideLoading, showLoading]);
 
   const handleDelete = useCallback(async (e) => {
     if (e) e.stopPropagation();
@@ -207,7 +203,7 @@ function HabitCard({ habit, userId, isChecked: initialChecked, onMilestone, isLo
           </div>
         </div>
 
-        <div className="flex items-center justify-end gap-1.5 pt-2 border-t border-bento-border/30 mt-1 flex-shrink-0">
+        <div className="flex items-center justify-end gap-1.5 pt-2 border-t border-bento-border/30 mt-1 shrink-0">
           <button
             onClick={handleSaveEdit}
             disabled={!editName.trim()}
@@ -240,14 +236,14 @@ function HabitCard({ habit, userId, isChecked: initialChecked, onMilestone, isLo
       data-checked={isChecked}
       data-pressing={pressing}
       onClick={handleToggle}
-      className={`group flex items-center gap-3 px-4 py-3 rounded-2xl border bg-bento-card border-bento-border transition-all w-full min-h-[66px] ${
+      className={`group flex items-center gap-3 px-4 py-3 rounded-2xl border bg-bento-card border-bento-border transition-all w-full min-h-16.5 ${
         isLocked
           ? "cursor-default opacity-85"
           : "cursor-pointer hover:border-bento-border/80 data-pressing:scale-[0.98]"
       } ${isChecked ? "opacity-65" : ""}`}
     >
       <div
-        className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+        className="w-2.5 h-2.5 rounded-full shrink-0"
         style={{ background: dotColor }}
       />
 
@@ -261,7 +257,7 @@ function HabitCard({ habit, userId, isChecked: initialChecked, onMilestone, isLo
           </p>
           {reminderList.length > 0 && (
             <div className="flex items-center gap-1 text-[10px] text-bento-muted flex-wrap">
-              <Bell className="w-3 h-3 text-green-500 flex-shrink-0" />
+              <Bell className="w-3 h-3 text-green-500 shrink-0" />
               <span>{reminderList.join(" · ")}</span>
             </div>
           )}
@@ -270,10 +266,16 @@ function HabitCard({ habit, userId, isChecked: initialChecked, onMilestone, isLo
 
       {/* Action buttons (Edit & Delete) */}
       
-        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 max-md:opacity-75 transition-opacity duration-150 mr-1 flex-shrink-0">
+        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 max-md:opacity-75 transition-opacity duration-150 mr-1 shrink-0">
           <button
             onClick={(e) => {
               e.stopPropagation();
+              // Refresh edit fields from the latest habit data before entering edit mode
+              setEditName(habit.name);
+              setEditFrequency(habit.frequency || "daily");
+              setEditReminders(
+                (habit.reminder_time || habit.reminderTime || "").split(",").filter(Boolean)
+              );
               setIsEditing(true);
             }}
             className="p-1.5 rounded-lg text-bento-muted hover:text-white hover:bg-bento-border transition-colors"
@@ -296,14 +298,14 @@ function HabitCard({ habit, userId, isChecked: initialChecked, onMilestone, isLo
         disabled={isLocked}
         aria-label={isChecked ? "Mark incomplete" : "Mark complete"}
         aria-pressed={isChecked}
-        className={`w-7 h-7 flex items-center justify-center rounded-full flex-shrink-0 ${
+        className={`w-7 h-7 flex items-center justify-center rounded-full shrink-0 ${
           isChecked
             ? "text-green-500"
             : "border border-bento-border text-bento-muted"
         }`}
       >
         {isChecked ? (
-          <CheckCircle2 className="w-7 h-7 text-green-500 flex-shrink-0" />
+          <CheckCircle2 className="w-7 h-7 text-green-500 shrink-0" />
         ) : null}
       </button>
     </div>

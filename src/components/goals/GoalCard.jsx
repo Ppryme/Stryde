@@ -54,9 +54,11 @@ function GoalCard({ goal }) {
 
   // Local goal state for smooth, instant optimistic updates
   const [localGoal, setLocalGoal] = useState(goal);
-  useEffect(() => {
+  const [prevGoalProp, setPrevGoalProp] = useState(goal);
+  if (goal !== prevGoalProp) {
+    setPrevGoalProp(goal);
     setLocalGoal(goal);
-  }, [goal]);
+  }
 
   const [expanded, setExpanded] = useState(false);
   const [extending, setExtending] = useState(false);
@@ -74,21 +76,44 @@ function GoalCard({ goal }) {
 
   const todayStr = getLocalDateString();
 
-  // Memoize parsed goal data based on localGoal.id and localGoal.description
+  // Memoize parsed goal data based on localGoal
   const parsedGoal = useMemo(
     () => parseGoal(localGoal),
-    [localGoal.id, localGoal.description]
+    [localGoal]
   );
   const { tasks, reminders, completionHistory, createdAtDate } = parsedGoal;
 
-  // Local state for optimistic checklist updates
-  const [localHistory, setLocalHistory] = useState(completionHistory);
+  // Optimistic overlay: null means "use server data"; set on task toggle for instant UI feedback.
+  // We use the React-documented "setState during render" pattern to reset the overlay when the
+  // server sends a new description — no useEffect needed, no cascading re-render.
+  const [optimisticState, setOptimisticState] = useState({
+    history: null,
+    forDescription: localGoal.description,
+  });
 
-  useEffect(() => {
-    setLocalHistory(completionHistory);
-  }, [localGoal.description]);
+  // If the server's description changed AND it differs from what we optimistically wrote,
+  // reset the overlay.  Calling setState during render is intentional here per React docs:
+  // https://react.dev/reference/react/useState#storing-information-from-previous-renders
+  if (
+    optimisticState.forDescription !== localGoal.description &&
+    optimisticState.history !== null
+  ) {
+    setOptimisticState({ history: null, forDescription: localGoal.description });
+  }
 
-  const todayCompletions = localHistory[todayStr] ?? [];
+  const optimisticHistory =
+    optimisticState.forDescription === localGoal.description
+      ? optimisticState.history
+      : null;
+
+  // localHistory is the server-parsed history, overlaid with any optimistic update.
+  const localHistory = optimisticHistory ?? completionHistory;
+
+  // Stable memoised slice of today's completions so useCallback deps don't change every render.
+  const todayCompletions = useMemo(
+    () => localHistory[todayStr] ?? [],
+    [localHistory, todayStr]
+  );
   const completedTodayCount = todayCompletions.length;
   const totalTasksCount = tasks.length;
 
@@ -111,7 +136,7 @@ function GoalCard({ goal }) {
       }
     }
     autoEvaluate();
-  }, [localGoal.id, localGoal.status, localGoal.target_date, localGoal.description, updateGoal]);
+  }, [localGoal.id, localGoal.status, localGoal.target_date, localGoal.description, updateGoal, setLocalGoal, localGoal]);
 
   // Toggle task completion without collapsing the card
   const toggleTask = useCallback(
@@ -142,8 +167,8 @@ function GoalCard({ goal }) {
       const newProgress = calculateProgress(tempGoal);
       const newStatus = evaluateGoalStatus({ ...tempGoal, progress_pct: newProgress });
 
-      // Optimistically update local state immediately
-      setLocalHistory(newHistory);
+      // Optimistically update local state immediately (no useEffect needed)
+      setOptimisticState({ history: newHistory, forDescription: localGoal.description });
       setLocalGoal((prev) => ({
         ...prev,
         description: newDescription,
@@ -159,10 +184,22 @@ function GoalCard({ goal }) {
         });
       } catch (err) {
         console.error("Failed to toggle goal task:", err);
-        setLocalHistory(completionHistory);
+        // Rollback: discard optimistic overlay so server data shows again
+        setOptimisticState({ history: null, forDescription: localGoal.description });
       }
     },
-    [todayCompletions, localHistory, todayStr, tasks, reminders, createdAtDate, localGoal, updateGoal, completionHistory]
+    [
+      todayCompletions,
+      localHistory,
+      todayStr,
+      tasks,
+      reminders,
+      createdAtDate,
+      localGoal,
+      updateGoal,
+      setOptimisticState,
+      setLocalGoal,
+    ]
   );
 
   const handleDelete = useCallback(
@@ -199,7 +236,7 @@ function GoalCard({ goal }) {
       setEditError("");
       setIsEditing(true);
     },
-    [localGoal]
+    [localGoal, setEditTitle, setEditTargetDate, setEditTasks, setEditReminders, setEditError, setIsEditing]
   );
 
   // Edit Handlers for Task & Reminders
@@ -343,7 +380,7 @@ function GoalCard({ goal }) {
     } finally {
       hideLoading();
     }
-  }, [newTargetDate, todayStr, localGoal, updateGoal, showLoading, hideLoading]);
+  }, [newTargetDate, todayStr, localGoal, updateGoal, showLoading, hideLoading, setError, setLocalGoal, setExtending]);
 
   const handleRestart = useCallback(async () => {
     if (!confirm("Restart this goal? All task completion history will be reset.")) return;
@@ -372,13 +409,14 @@ function GoalCard({ goal }) {
         progress_pct: 0,
         status: "active",
       }));
-      setLocalHistory({});
+      // Clear the optimistic overlay so the reset empty history is shown immediately
+      setOptimisticState({ history: {}, forDescription: newDescription });
     } catch (err) {
       console.error("Failed to restart goal:", err);
     } finally {
       hideLoading();
     }
-  }, [localGoal, todayStr, updateGoal, showLoading, hideLoading]);
+  }, [localGoal, todayStr, updateGoal, showLoading, hideLoading, setLocalGoal, setOptimisticState]);
 
   const handleArchive = useCallback(async () => {
     if (!confirm("Archive this goal? It will be moved to history.")) return;
@@ -391,7 +429,7 @@ function GoalCard({ goal }) {
     } finally {
       hideLoading();
     }
-  }, [localGoal.id, updateGoal, hideLoading]);
+  }, [localGoal.id, updateGoal, hideLoading, setLocalGoal]);
 
   const variant = STATUS_VARIANT[localGoal.status] ?? "info";
   const label = STATUS_LABEL[localGoal.status] ?? localGoal.status;
@@ -554,7 +592,7 @@ function GoalCard({ goal }) {
             {localGoal.title}
           </p>
           <div className="flex flex-wrap items-center gap-3 mt-1 text-[11px] text-bento-muted">
-            <span className="flex items-center gap-1">
+            <span suppressHydrationWarning className="flex items-center gap-1">
               <Calendar className="w-3 h-3 text-bento-muted" />
               {daysRemaining > 0 ? `${daysRemaining} days remaining` : "Deadline today"}
             </span>
@@ -567,7 +605,7 @@ function GoalCard({ goal }) {
           </div>
         </div>
 
-        <div className="flex items-center gap-2 flex-shrink-0">
+        <div className="flex items-center gap-2 shrink-0">
           <Badge variant={variant} className="capitalize">
             {label}
           </Badge>
@@ -611,7 +649,7 @@ function GoalCard({ goal }) {
         </div>
         <div className="flex items-center justify-between text-[11px] text-bento-muted mt-1.5 font-medium">
           <span>{localGoal.progress_pct ?? 0}% complete</span>
-          <span>{completedDaysCount} / {totalDays} days completed</span>
+          <span suppressHydrationWarning>{completedDaysCount} / {totalDays} days completed</span>
         </div>
       </div>
 
@@ -622,7 +660,7 @@ function GoalCard({ goal }) {
             <Flame className="w-4 h-4 text-stryde-fire" />
             <div>
               <p className="text-[10px] text-bento-muted">Current Streak</p>
-              <p className="font-bold">{streak} {streak === 1 ? "day" : "days"}</p>
+              <p suppressHydrationWarning className="font-bold">{streak} {streak === 1 ? "day" : "days"}</p>
             </div>
           </div>
         </div>
@@ -657,7 +695,7 @@ function GoalCard({ goal }) {
                   onClick={(e) => toggleTask(task.id, e)}
                   className="flex items-center gap-2.5 cursor-pointer py-1.5 hover:text-bento-text text-bento-muted transition-colors text-sm"
                 >
-                  <span className="flex-shrink-0 transition-all">
+                  <span className="shrink-0 transition-all">
                     {checked ? (
                       <CheckCircle2 className="w-5 h-5 text-stryde-success" />
                     ) : (

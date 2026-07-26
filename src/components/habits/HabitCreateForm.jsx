@@ -115,7 +115,7 @@ export default function HabitCreateForm({ userId }) {
                   : {}),
               }}
             >
-              <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: cat.color }} />
+              <div className="w-2 h-2 rounded-full shrink-0" style={{ background: cat.color }} />
               {cat.label}
             </button>
           ))}
