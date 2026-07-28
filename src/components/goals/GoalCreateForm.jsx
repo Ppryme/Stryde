@@ -226,15 +226,12 @@ export default function GoalCreateForm({ userId }) {
       {/* Target Date Section */}
       <div className="p-4 rounded-2xl bg-bento-card border border-bento-border">
         <FormLabel>Target Date</FormLabel>
-        <Input
-          type="date"
-          value={targetDate}
-          onChange={(e) => {
-            setTargetDate(e.target.value);
-            setError("");
-          }}
-          className="w-full px-3 py-2 text-sm rounded-xl bg-bento-bg border border-bento-border text-bento-text outline-none focus:border-stryde-primary transition-all"
-        />
+            <input
+              type="date"
+              value={targetDate}
+              onChange={(e) => setTargetDate(e.target.value)}
+              className="w-full px-3 py-2 text-sm rounded-xl bg-bento-bg border border-bento-border text-bento-text outline-none focus:border-stryde-primary transition-all"
+            />
         <p className="text-xs text-bento-muted mt-2">
           Complete this goal before this date.
         </p>
