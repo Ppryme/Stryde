@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { useGoal } from "@/hooks/useGoal";
 import Badge from "@/components/ui/badge";
 import useAppStore from "@/stores/useAppStore";
+import { TargetDatePicker } from "../ui/Reusable/TargetDatePicker";
+import { formatDateISO } from "@/lib/date";
 import {
   parseGoal,
   getStreak,
@@ -471,12 +473,13 @@ function GoalCard({ goal }) {
             <label className="text-[11px] font-semibold text-bento-muted uppercase tracking-wider block mb-1">
               Target Date
             </label>
-            <input
-              type="date"
-              value={editTargetDate}
-              onChange={(e) => setEditTargetDate(e.target.value)}
-              className="w-full px-3 py-2 text-sm rounded-xl bg-bento-bg border border-bento-border text-bento-text outline-none focus:border-stryde-primary transition-all"
-            />
+        <TargetDatePicker
+          label="Target date"
+          placeholder="Select a target date"
+          value={newTargetDate}
+          onChange={setNewTargetDate}
+          min={formatDateISO()}
+        />
           </div>
         </div>
 
