@@ -233,7 +233,7 @@ export default function GoalCreateForm({ userId }) {
             setTargetDate(e.target.value);
             setError("");
           }}
-          className="w-full sm:w-auto"
+          className="w-full sm:w-auto  text-bento-text"
         />
         <p className="text-xs text-bento-muted mt-2">
           Complete this goal before this date.
