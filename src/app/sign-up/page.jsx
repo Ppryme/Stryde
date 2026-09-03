@@ -7,6 +7,8 @@ import { signUp, signInWithGoogle } from "@/lib/auth";
 import Button from "@/components/ui/button";
 import FormError from "@/components/ui/FormError";
 import Input from "@/components/ui/Input";
+import GlobalLoadingOverlay from "@/components/ui/Reusable/GlobalLoadingOverlay";
+import ResetGlobalLoading from "@/components/ui/Reusable/ResetGlobalLoading";
 
 export default function SignUpPage() {
   const router = useRouter();
@@ -33,6 +35,7 @@ export default function SignUpPage() {
     }
 
     setLoading(true);
+    showLoading("Creating Account");
     setError("");
 
     if (password !== confirmPassword) {
@@ -54,6 +57,8 @@ export default function SignUpPage() {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-6">
+      <GlobalLoadingOverlay />
+      <ResetGlobalLoading />
       <div className="w-full max-w-md flex flex-col mx-auto gap-6">
         <div>
           <h1 className="text-3xl font-bold text-bento-text">
