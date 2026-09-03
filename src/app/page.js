@@ -24,7 +24,7 @@ async function getStarted() {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect("/sign-in");
+    redirect("/sign-up");
   }
 
 }
@@ -45,7 +45,7 @@ export default async function HomePage() {
   const hasSeenLanding = cookieStore.get(LANDING_SEEN_COOKIE)?.value === "true";
 
   if (hasSeenLanding) {
-    redirect("/sign-up");
+    redirect("/sign-in");
   }
 
   return <LandingPage getStarted={getStarted} />;
