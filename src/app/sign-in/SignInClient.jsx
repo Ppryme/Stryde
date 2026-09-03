@@ -1,11 +1,13 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import useAppStore from "@/stores/useAppStore";
 import Link from "next/link";
 import { signIn, signInWithGoogle } from "@/lib/auth";
 import Button from "@/components/ui/button";
 import FormError from "@/components/ui/FormError";
 import Input from "@/components/ui/Input";
+
 
 
 
@@ -25,6 +27,7 @@ export default function SignInClient({authError}) {
     }
 
     setLoading(true);
+    showLoading("Signing In")
     setError("");
 
     const { data, error } = await signIn(email, password);
