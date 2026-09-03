@@ -45,10 +45,8 @@ export default async function HomePage() {
   const hasSeenLanding = cookieStore.get(LANDING_SEEN_COOKIE)?.value === "true";
 
   if (hasSeenLanding) {
-    redirect("/sign-in");
-  } else {
-    redirect("/sign-up")
+    redirect("/sign-up");
   }
 
-  return <LandingPage getStarted = {getStarted} />;
+  return <LandingPage getStarted={getStarted} />;
 }
