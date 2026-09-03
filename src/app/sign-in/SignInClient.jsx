@@ -7,6 +7,8 @@ import { signIn, signInWithGoogle } from "@/lib/auth";
 import Button from "@/components/ui/button";
 import FormError from "@/components/ui/FormError";
 import Input from "@/components/ui/Input";
+import GlobalLoadingOverlay from "@/components/ui/Reusable/GlobalLoadingOverlay";
+import ResetGlobalLoading from "@/components/ui/Reusable/ResetGlobalLoading";
 
 
 
@@ -19,6 +21,8 @@ export default function SignInClient({authError}) {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(authError || "");
+  const showLoading = useAppStore((state) => state.showLoading);
+  const hideLoading = useAppStore((state) => state.hideLoading);
 
   async function handleSubmit() {
     if (!navigator.onLine) {
@@ -53,11 +57,14 @@ export default function SignInClient({authError}) {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-6 bg-bento-bg">
-      <div className="w-full max-w-md flex flex-col gap-6">
-        <div>
-          <h1 className="text-3xl font-bold mb-1 text-bento-text">
-            Welcome Back
+    <>
+      <GlobalLoadingOverlay />
+      <ResetGlobalLoading />
+      <div className="min-h-screen flex flex-col items-center justify-center px-6 bg-bento-bg">
+        <div className="w-full max-w-md flex flex-col gap-6">
+          <div>
+            <h1 className="text-3xl font-bold mb-1 text-bento-text">
+              Welcome Back
           </h1>
           <p className="text-sm text-bento-muted">
             Sign in to continue your streak.
@@ -121,5 +128,6 @@ export default function SignInClient({authError}) {
         )}
       </div>
     </div>
+    </>
   );
 }

@@ -1,5 +1,6 @@
 import "./globals.css";
 
+
 export const metadata = {
   title: "Stryde",
   description: "Build streaks. Not excuses.",

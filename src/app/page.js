@@ -46,6 +46,8 @@ export default async function HomePage() {
 
   if (hasSeenLanding) {
     redirect("/sign-in");
+  } else {
+    redirect("/sign-up")
   }
 
   return <LandingPage getStarted = {getStarted} />;
