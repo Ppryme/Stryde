@@ -9,6 +9,7 @@ import FormError from "@/components/ui/FormError";
 import Input from "@/components/ui/Input";
 import GlobalLoadingOverlay from "@/components/ui/Reusable/GlobalLoadingOverlay";
 import ResetGlobalLoading from "@/components/ui/Reusable/ResetGlobalLoading";
+import useAppStore from "@/stores/useAppStore";
 
 export default function SignUpPage() {
   const router = useRouter();
@@ -20,6 +21,7 @@ export default function SignUpPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+   const showLoading = useAppStore((state) => state.showLoading);
 
   async function handleGoogle() {
     setLoading(true);
@@ -34,8 +36,7 @@ export default function SignUpPage() {
       return;
     }
 
-    setLoading(true);
-    showLoading("Creating Account");
+    
     setError("");
 
     if (password !== confirmPassword) {
@@ -44,6 +45,8 @@ export default function SignUpPage() {
     return;
   }
 
+  
+
     const { error } = await signUp(email, password, name);
 
     if (error) {
@@ -51,6 +54,9 @@ export default function SignUpPage() {
       setLoading(false);
       return;
     }
+
+    setLoading(true);
+    showLoading("Creating Account");
 
     router.push("/onboarding");
   }
