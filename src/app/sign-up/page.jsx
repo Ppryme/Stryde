@@ -22,6 +22,7 @@ export default function SignUpPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
    const showLoading = useAppStore((state) => state.showLoading);
+   const hideLoading = useAppStore((state) => state.hideLoading);
 
   async function handleGoogle() {
     setLoading(true);
@@ -33,6 +34,7 @@ export default function SignUpPage() {
   async function handleSubmit() {
     if (!navigator.onLine) {
       setError("You're offline. Connect to the internet.");
+      hideLoading();
       return;
     }
 
@@ -45,8 +47,7 @@ export default function SignUpPage() {
     return;
   }
 
-  
-
+  hideLoading();
     const { error } = await signUp(email, password, name);
 
     if (error) {

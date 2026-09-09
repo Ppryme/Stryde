@@ -30,17 +30,20 @@ export default function SignInClient({authError}) {
       return;
     }
 
-    setLoading(true);
-    showLoading("Signing In")
-    setError("");
+   
 
     const { data, error } = await signIn(email, password);
 
     if (error) {
       setError(error.message);
       setLoading(false);
+      hideLoading();
       return;
     }
+
+    setLoading(true);
+    showLoading("Signing In");
+    setError("");
 
     if (data.user?.user_metadata?.onboarded) {
       router.push("/");
