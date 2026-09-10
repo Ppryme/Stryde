@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, memo, useCallback } from "react";
-import { StreakRepository } from "@/repositories/streakRepository";
 import { HABIT_CATEGORIES } from "@/lib/design-token";
 import { CheckCircle2, Edit2, Trash2, Bell } from "lucide-react";
 import useAppStore from "@/stores/useAppStore";
@@ -55,15 +54,10 @@ function HabitCard({ habit, userId, isChecked: initialChecked, onMilestone, isLo
         date: today,
         completed: newValue,
       });
-
-      const { currentStreak } = await StreakRepository.updateStreak(habit.id, userId);
-
-      // Fire milestone callback if warranted
-      if (newValue && currentStreak) onMilestone?.(currentStreak);
     } catch (err) {
       console.error("Failed to toggle check-in:", err);
     }
-  }, [isChecked, isLocked, habit.id, userId, today, markCheckedIn, onMilestone]);
+  }, [isChecked, isLocked, habit.id, userId, today, markCheckedIn]);
 
   const handleSaveEdit = useCallback(async (e) => {
     if (e) e.stopPropagation();

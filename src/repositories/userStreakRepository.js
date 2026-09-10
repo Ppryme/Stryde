@@ -1,14 +1,27 @@
 import { db } from "@/lib/db";
 import { getSupabase } from "@/lib/supabase";
 import { getLocalDateString } from "@/lib/date";
-import { computeMissedDayPenalty } from "@/lib/streakUtils";
+import {
+  computeMissedDayPenalty,
+  computeOverallStreakFromCheckIns,
+  areAllDailyHabitsCompleted,
+} from "@/lib/streakUtils";
 
+/**
+ * Repository for Option A: Overall "Perfect-Day" User Streak System.
+ *
+ * Serves as the SINGLE SOURCE OF TRUTH for user streaks.
+ * Under Option A:
+ *   - Exactly one streak record exists per user in `db.userStreaks` and Supabase `user_streaks`.
+ *   - The streak only advances when ALL active daily habits for the user are completed on that date.
+ *   - Checking off only a subset of habits never advances the streak.
+ */
 export const UserStreakRepository = {
   /**
    * Retrieves or initializes the user's overall streak record.
    *
    * @param {string} userId
-   * @returns {Object} { id, userId, currentStreak, longestStreak, lastCompletedDate, updatedAt }
+   * @returns {Promise<{ id?: number, userId: string, currentStreak: number, longestStreak: number, lastCompletedDate: string|null, updatedAt: string }>}
    */
   async getOrCreate(userId) {
     if (!userId) return { currentStreak: 0, longestStreak: 0, lastCompletedDate: null };
@@ -36,10 +49,10 @@ export const UserStreakRepository = {
   },
 
   /**
-   * Retrieves the current persistent overall streak for a user.
+   * Retrieves the current persistent overall streak count for a user.
    *
    * @param {string} userId
-   * @returns {number}
+   * @returns {Promise<number>}
    */
   async get(userId) {
     const record = await this.getOrCreate(userId);
@@ -51,7 +64,7 @@ export const UserStreakRepository = {
    * Called on app/dashboard load.
    *
    * @param {string} userId
-   * @returns {Object} Updated record
+   * @returns {Promise<Object|null>} Updated record
    */
   async applyMissedDayPenalty(userId) {
     if (!userId) return null;
@@ -81,11 +94,45 @@ export const UserStreakRepository = {
   },
 
   /**
-   * Called when all daily habits for today are completed.
-   * Increments streak if consecutive, or sets to 1 if broken/new.
+   * Checks whether all active daily habits have been completed today (or on a specific date)
+   * for the given user.
    *
    * @param {string} userId
-   * @returns {Object} Updated record
+   * @param {string} [date] YYYY-MM-DD string (defaults to today)
+   * @returns {Promise<boolean>}
+   */
+  async hasCompletedAllDailyHabitsToday(userId, date = getLocalDateString()) {
+    if (!userId) return false;
+
+    try {
+      const activeHabits = await db.habits
+        .where("userId")
+        .equals(userId)
+        .and((h) => h.frequency === "daily" && !h.archived)
+        .toArray();
+
+      if (activeHabits.length === 0) return false;
+
+      const checkIns = await db.checkIns
+        .where("[userId+date]")
+        .equals([userId, date])
+        .and((c) => c.completed === true)
+        .toArray();
+
+      return areAllDailyHabitsCompleted(activeHabits, checkIns);
+    } catch (err) {
+      console.error("[Stryde] Failed to check daily habit completion:", err);
+      return false;
+    }
+  },
+
+  /**
+   * Called when all daily habits for today are completed.
+   * Increments streak if consecutive with yesterday, or sets to 1 if broken/new.
+   * Idempotent: safe to call multiple times on the same calendar day.
+   *
+   * @param {string} userId
+   * @returns {Promise<Object|null>} Updated record
    */
   async onDayCompleted(userId) {
     if (!userId) return null;
@@ -133,6 +180,58 @@ export const UserStreakRepository = {
   },
 
   /**
+   * Evaluates if all active daily habits are completed today for the user.
+   * If yes, automatically records day completion via onDayCompleted(userId).
+   *
+   * @param {string} userId
+   * @param {string} [date] YYYY-MM-DD
+   * @returns {Promise<{ completed: boolean, record: Object|null }>}
+   */
+  async checkAndRecordDayCompletion(userId, date = getLocalDateString()) {
+    if (!userId) return { completed: false, record: null };
+
+    const isAllCompleted = await this.hasCompletedAllDailyHabitsToday(userId, date);
+    if (isAllCompleted) {
+      const record = await this.onDayCompleted(userId);
+      return { completed: true, record };
+    }
+
+    const record = await this.getOrCreate(userId);
+    return { completed: false, record };
+  },
+
+  /**
+   * Computes the overall streak dynamically across historical check-ins in IndexedDB.
+   * Useful for analytics, cross-verification, and recovery.
+   *
+   * @param {string} userId
+   * @returns {Promise<number>}
+   */
+  async getOverallStreak(userId) {
+    if (!userId) return 0;
+
+    try {
+      const activeHabits = await db.habits
+        .where("userId").equals(userId)
+        .and((h) => h.frequency === "daily" && !h.archived)
+        .toArray();
+
+      if (activeHabits.length === 0) return 0;
+
+      const checkIns = await db.checkIns
+        .where("userId").equals(userId)
+        .and((c) => c.completed === true)
+        .toArray();
+
+      const { currentStreak } = computeOverallStreakFromCheckIns(checkIns, activeHabits);
+      return currentStreak;
+    } catch (err) {
+      console.error("[Stryde] Failed to calculate overall streak from check-ins:", err);
+      return 0;
+    }
+  },
+
+  /**
    * Internal helper to sync user_streaks to Supabase or queue offline.
    */
   async _sync(record) {
@@ -167,3 +266,5 @@ export const UserStreakRepository = {
     }
   },
 };
+
+export default UserStreakRepository;

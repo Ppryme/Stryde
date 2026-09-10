@@ -3,7 +3,6 @@
 import { useState, useEffect, memo, useCallback } from "react";
 import { db } from "@/lib/db";
 import { getSupabase } from "@/lib/supabase";
-import { StreakRepository } from "@/repositories/streakRepository";
 import { CheckCircle2, Edit2, Trash2, Bell } from "lucide-react";
 import useAppStore from "@/stores/useAppStore";
 import { getLocalDateString } from "@/lib/date";
@@ -47,13 +46,10 @@ function CheckInCard({ habit, userId, today, isChecked, onToggle, onMilestone, i
         date: clientToday,
         completed: newValue,
       });
-
-      const { currentStreak } = await StreakRepository.updateStreak(habit.id, userId);
-      if (newValue && currentStreak) onMilestone?.(currentStreak);
     } catch (err) {
       console.error("Failed to toggle check-in:", err);
     }
-  }, [isChecked, isLocked, habit.id, userId, onToggle, onMilestone]);
+  }, [isChecked, isLocked, habit.id, userId, onToggle]);
 
   const handleSaveEdit = useCallback(async (e) => {
     if (e) e.stopPropagation();
@@ -83,7 +79,7 @@ function CheckInCard({ habit, userId, today, isChecked, onToggle, onMilestone, i
     } finally {
       hideLoading();
     }
-  }, [editName, editFrequency, editReminders, habit.id, habits, setHabits,updateHabit]);
+  }, [editName, editFrequency, editReminders, habit.id, habits, setHabits, updateHabit, hideLoading, showLoading]);
 
   const handleDelete = useCallback(async (e) => {
     if (e) e.stopPropagation();

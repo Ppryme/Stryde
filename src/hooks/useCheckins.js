@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { db } from '@/lib/db';
 import { supabase } from '@/lib/supabase';
 import useAppStore from '@/stores/useAppStore';
-import { StreakRepository } from '@/repositories/streakRepository';
+import { UserStreakRepository } from '@/repositories/userStreakRepository';
 
 export function useCheckins(userId) {
   const { todayCheckIns, markCheckedIn } = useAppStore();
@@ -51,8 +51,10 @@ export function useCheckins(userId) {
       });
     }
 
-    // 3. Recalculate streak locally
-    await StreakRepository.updateStreak(habitId, userId);
+    // 3. Option A: Check if all active daily habits are completed for today
+    if (newValue) {
+      await UserStreakRepository.checkAndRecordDayCompletion(userId, today);
+    }
 
     // 4. Queue for Supabase sync
     await db.queue.add({
