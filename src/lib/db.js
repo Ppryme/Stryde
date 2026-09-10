@@ -42,4 +42,13 @@ db.version(3).stores({
   queue:       "++id, type, createdAt",
 });
 
+db.version(4).stores({
+  habits:      "++id, userId, frequency, archived",
+  goals:       "++id, userId, status",
+  checkIns:    "++id, [userId+date], [habitId+userId+date], habitId, date, synced",
+  streaks:     "++id, &habitId",
+  userStreaks: "++id, &userId",
+  queue:       "++id, type, createdAt",
+});
+
 export default db;
