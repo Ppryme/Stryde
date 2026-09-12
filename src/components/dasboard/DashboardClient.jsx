@@ -16,7 +16,7 @@ export default function DashboardClient({ userId, initialHabits, initialCheckedI
   const hasSeededHabits   = useAppStore((state) => state.hasSeededHabits);
 
   // Hook handles missed day penalty on mount and provides streak state & mutations
-  const { streak, recordDayCompleted } = useStreak(userId);
+  const { streak, isLoading: isStreakLoading, recordDayCompleted } = useStreak(userId);
 
   // ── Seed Zustand on first mount only ────────────────────────────────────
   useEffect(() => {
@@ -92,7 +92,7 @@ export default function DashboardClient({ userId, initialHabits, initialCheckedI
               {completedCount}/{totalHabits} done
             </p>
           </div>
-          <StreakBadge streak={streak} />
+          <StreakBadge streak={streak} isLoading={isStreakLoading} />
         </div>
       </div>
 

@@ -16,8 +16,8 @@ import { useEffect } from "react";
 import { useStreak } from "@/hooks/useStreak";
 import { Flame } from "lucide-react";
 
-export default function StreakBadge({ userId, streak: streakProp, trigger }) {
-  const { streak: hookStreak, isLoading, refresh } = useStreak(streakProp === undefined ? userId : null);
+export default function StreakBadge({ userId, streak: streakProp, isLoading: isLoadingProp, trigger }) {
+  const { streak: hookStreak, isLoading: hookLoading, refresh } = useStreak(streakProp === undefined ? userId : null);
 
   useEffect(() => {
     if (trigger !== undefined && streakProp === undefined && userId) {
@@ -25,10 +25,17 @@ export default function StreakBadge({ userId, streak: streakProp, trigger }) {
     }
   }, [trigger, streakProp, userId, refresh]);
 
+  const isLoading = isLoadingProp !== undefined ? isLoadingProp : hookLoading;
   const displayStreak = streakProp !== undefined ? streakProp : hookStreak;
 
-  // While loading (and no direct streakProp provided), render nothing to avoid flash of "0".
-  if (isLoading && streakProp === undefined) return null;
+  if (isLoading) {
+    return (
+      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium shrink-0 bg-stryde-fire-light text-stryde-fire-dark">
+        <Flame className="w-3.5 h-3.5 animate-pulse" aria-hidden="true" />
+        <span className="inline-block w-3 h-3 border-2 border-stryde-fire-dark/30 border-t-stryde-fire-dark rounded-full animate-spin" />
+      </span>
+    );
+  }
 
   return (
     <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium shrink-0 bg-stryde-fire-light text-stryde-fire-dark">

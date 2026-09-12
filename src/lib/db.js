@@ -8,43 +8,9 @@ import Dexie from "dexie";
 
 export const db = new Dexie("StrydeDB");
 
-db.version(1).stores({
-  habits:   "++id, userId, frequency, archived",
-  goals:    "++id, userId, status",
-  checkIns: "++id, [userId+date], habitId, date, synced",
-  streaks:  "++id, &habitId",          // & means habitId is unique
-  queue:    "++id, type, createdAt",   // pending sync operations
-});
-
-db.version(2).stores({
-  habits:   "++id, userId, frequency, archived",
-  goals:    "++id, userId, status",
-  checkIns: "++id, [userId+date], habitId, date, synced",
-  streaks:  "++id, &habitId",
-  queue:    "++id, type, createdAt",
-}).upgrade(trans => {
-  // Clear tables to force re-sync with UUIDs from Supabase
-  return Promise.all([
-    trans.habits.clear(),
-    trans.goals.clear(),
-    trans.checkIns.clear(),
-    trans.streaks.clear(),
-    trans.queue.clear(),
-  ]);
-});
-
-db.version(3).stores({
-  habits:      "++id, userId, frequency, archived",
-  goals:       "++id, userId, status",
-  checkIns:    "++id, [userId+date], habitId, date, synced",
-  streaks:     "++id, &habitId",
-  userStreaks: "++id, &userId",
-  queue:       "++id, type, createdAt",
-});
-
 db.version(4).stores({
-  habits:      "++id, userId, frequency, archived",
-  goals:       "++id, userId, status",
+  habits:      "++id, userId, frequency, archived, synced",
+  goals:       "++id, userId, status, synced",
   checkIns:    "++id, [userId+date], [habitId+userId+date], habitId, date, synced",
   streaks:     "++id, &habitId",
   userStreaks: "++id, &userId",
