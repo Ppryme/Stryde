@@ -2,9 +2,12 @@ import { useState } from "react";
 import useAppStore from "@/stores/useAppStore";
 import { GoalRepository } from "@/repositories/goalRepository";
 
-export function useGoal() {
+export function useGoal(userId) {
   const showLoading = useAppStore((state) => state.showLoading);
   const hideLoading = useAppStore((state) => state.hideLoading);
+  const storeUser = useAppStore((state) => state.user);
+  const activeUserId = userId || storeUser?.id;
+
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
@@ -14,7 +17,7 @@ export function useGoal() {
     setError("");
 
     try {
-      await GoalRepository.createGoal(goalData);
+      await GoalRepository.createGoal({ ...goalData, userId: goalData.userId || goalData.user_id || activeUserId });
       setSaving(false);
       hideLoading();
       return true; // indicates success
@@ -29,7 +32,7 @@ export function useGoal() {
 
   const updateGoal = async (goalId, updates) => {
     try {
-      await GoalRepository.updateGoal(goalId, updates);
+      await GoalRepository.updateGoal(goalId, updates, activeUserId);
       return true;
     } catch (err) {
       console.error("Failed to update goal:", err);
@@ -39,7 +42,7 @@ export function useGoal() {
 
   const deleteGoal = async (goalId) => {
     try {
-      await GoalRepository.deleteGoal(goalId);
+      await GoalRepository.deleteGoal(goalId, activeUserId);
       return true;
     } catch (err) {
       console.error("Failed to delete goal:", err);

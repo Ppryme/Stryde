@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import useAppStore from "@/stores/useAppStore";
 import Link from "next/link";
@@ -10,10 +10,6 @@ import Input from "@/components/ui/Input";
 import GlobalLoadingOverlay from "@/components/ui/Reusable/GlobalLoadingOverlay";
 import ResetGlobalLoading from "@/components/ui/Reusable/ResetGlobalLoading";
 
-
-
-
-
 export default function SignInClient({authError}) {
   const router = useRouter();
   const [email, setEmail] = useState("");
@@ -23,6 +19,11 @@ export default function SignInClient({authError}) {
   const [error, setError] = useState(authError || "");
   const showLoading = useAppStore((state) => state.showLoading);
   const hideLoading = useAppStore((state) => state.hideLoading);
+  const resetStore = useAppStore((state) => state.resetStore);
+
+  useEffect(() => {
+    resetStore();
+  }, [resetStore]);
 
   async function handleSubmit() {
     if (!navigator.onLine) {

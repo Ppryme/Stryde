@@ -1,16 +1,25 @@
 // stores/useAppStore.js
 import { create } from "zustand";
 
-const useAppStore = create((set) => ({
+const initialState = {
   user: null,
   habits: [],
   hasSeededHabits: false,
   todayCheckIns: {},
   isOnline: true,
-
-  // Global Loading Overlay
   loading: false,
   loadingMessage: "",
+  undoAction: null,
+  milestone: null,
+  celebrationOpen: false,
+  celebratedTodayCount: 0,
+  visitedPages: new Set(),
+};
+
+const useAppStore = create((set) => ({
+  ...initialState,
+
+  resetStore: () => set(initialState),
 
   setUser: (user) => set({ user }),
   setHabits: (habits) => set({ habits, hasSeededHabits: true }),

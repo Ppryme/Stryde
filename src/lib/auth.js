@@ -5,6 +5,7 @@
 // not directly from supabase (easier to swap later)
 // ─────────────────────────────────────────────
 import { getSupabase } from "./supabase";
+import { db } from "./db";
 
 // Sign up with email + password
 export async function signUp(email, password, name) {
@@ -45,6 +46,20 @@ export async function signInWithGoogle() {
 export async function signOut() {
   const supabase = getSupabase();
   const { error } = await supabase.auth.signOut();
+
+  try {
+    await Promise.all([
+      db.habits.clear(),
+      db.goals.clear(),
+      db.checkIns.clear(),
+      db.streaks.clear(),
+      db.userStreaks.clear(),
+      db.queue.clear(),
+    ]);
+  } catch (dbErr) {
+    console.error("Failed to clear local DB on signOut:", dbErr);
+  }
+
   return { error };
 }
 

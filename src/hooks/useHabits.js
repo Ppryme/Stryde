@@ -66,7 +66,15 @@ export function useHabits(userId) {
 
   async function archiveHabit(habitId) {
     await db.habits.update(habitId, { archived: true });
-    await supabase.from('habits').update({ archived: true }).eq('id', habitId);
+    if (navigator.onLine) {
+      await supabase.from('habits').update({ archived: true }).eq('id', habitId).eq('user_id', userId);
+    } else {
+      await db.queue.add({
+        type: 'ARCHIVE_HABIT',
+        payload: { habitId, userId },
+        createdAt: new Date().toISOString(),
+      });
+    }
     setHabits(habits.filter((h) => h.id !== habitId));
   }
 
