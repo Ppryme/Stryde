@@ -24,27 +24,83 @@ export const UserStreakRepository = {
    * @returns {Promise<{ id?: number, userId: string, currentStreak: number, longestStreak: number, lastCompletedDate: string|null, updatedAt: string }>}
    */
   async getOrCreate(userId) {
-    if (!userId) return { currentStreak: 0, longestStreak: 0, lastCompletedDate: null };
+    if (!userId) return { id: null, userId: null, currentStreak: 0, longestStreak: 0, lastCompletedDate: null };
 
     try {
+      // 1. Check local IndexedDB first
       let record = await db.userStreaks.where("userId").equals(userId).first();
-
-      if (!record) {
-        const initialRecord = {
-          userId,
-          currentStreak: 0,
-          longestStreak: 0,
-          lastCompletedDate: null,
-          updatedAt: new Date().toISOString(),
-        };
-        const id = await db.userStreaks.add(initialRecord);
-        record = { ...initialRecord, id };
+      if (record && record.id) {
+        return record;
       }
 
-      return record;
+      // 2. If not found locally, re-hydrate from Supabase cloud if online
+      if (typeof navigator !== "undefined" && navigator.onLine) {
+        try {
+          const supabase = getSupabase();
+          const { data, error } = await supabase
+            .from("user_streaks")
+            .select("*")
+            .eq("user_id", userId)
+            .maybeSingle();
+
+          if (data && !error) {
+            // Re-check local DB in case of concurrent execution
+            const existingAgain = await db.userStreaks.where("userId").equals(userId).first();
+            if (existingAgain && existingAgain.id) {
+              return existingAgain;
+            }
+
+            const cloudRecord = {
+              userId,
+              currentStreak: data.current_streak ?? 0,
+              longestStreak: data.longest_streak ?? 0,
+              lastCompletedDate: data.last_completed_date ?? null,
+              updatedAt: data.updated_at || new Date().toISOString(),
+            };
+
+            try {
+              const id = await db.userStreaks.add(cloudRecord);
+              return { ...cloudRecord, id };
+            } catch (insertErr) {
+              const fallback = await db.userStreaks.where("userId").equals(userId).first();
+              if (fallback && fallback.id) return fallback;
+            }
+          }
+        } catch (cloudErr) {
+          console.warn("[Stryde] Supabase user_streaks re-hydration failed, fallback to local init:", cloudErr);
+        }
+      }
+
+      // 3. If no local or cloud record exists, initialize fresh streak
+      const doubleCheck = await db.userStreaks.where("userId").equals(userId).first();
+      if (doubleCheck && doubleCheck.id) {
+        return doubleCheck;
+      }
+
+      const initialRecord = {
+        userId,
+        currentStreak: 0,
+        longestStreak: 0,
+        lastCompletedDate: null,
+        updatedAt: new Date().toISOString(),
+      };
+
+      try {
+        const id = await db.userStreaks.add(initialRecord);
+        return { ...initialRecord, id };
+      } catch (insertErr) {
+        // Race condition handler: fetch record created by concurrent call
+        const fallback = await db.userStreaks.where("userId").equals(userId).first();
+        if (fallback && fallback.id) return fallback;
+        throw insertErr;
+      }
     } catch (err) {
       console.error("[Stryde] Failed to get/create user streak:", err);
-      return { currentStreak: 0, longestStreak: 0, lastCompletedDate: null };
+      try {
+        const fallback = await db.userStreaks.where("userId").equals(userId).first();
+        if (fallback && fallback.id) return fallback;
+      } catch (_) {}
+      return { id: null, userId, currentStreak: 0, longestStreak: 0, lastCompletedDate: null };
     }
   },
 
@@ -78,7 +134,7 @@ export const UserStreakRepository = {
       record.currentStreak
     );
 
-    if (newStreak !== record.currentStreak) {
+    if (newStreak !== record.currentStreak && record?.id) {
       const updatedAt = new Date().toISOString();
       await db.userStreaks.update(record.id, {
         currentStreak: newStreak,
@@ -153,19 +209,41 @@ export const UserStreakRepository = {
 
       if (gap === 1) {
         // Consecutive day!
-        newStreak = record.currentStreak + 1;
+        newStreak = (record.currentStreak ?? 0) + 1;
       }
     }
 
     const newLongest = Math.max(record.longestStreak ?? 0, newStreak);
     const updatedAt = new Date().toISOString();
 
-    await db.userStreaks.update(record.id, {
-      currentStreak: newStreak,
-      longestStreak: newLongest,
-      lastCompletedDate: today,
-      updatedAt,
-    });
+    if (record?.id) {
+      await db.userStreaks.update(record.id, {
+        currentStreak: newStreak,
+        longestStreak: newLongest,
+        lastCompletedDate: today,
+        updatedAt,
+      });
+    } else {
+      const existing = await db.userStreaks.where("userId").equals(userId).first();
+      if (existing?.id) {
+        record.id = existing.id;
+        await db.userStreaks.update(existing.id, {
+          currentStreak: newStreak,
+          longestStreak: newLongest,
+          lastCompletedDate: today,
+          updatedAt,
+        });
+      } else {
+        const id = await db.userStreaks.add({
+          userId,
+          currentStreak: newStreak,
+          longestStreak: newLongest,
+          lastCompletedDate: today,
+          updatedAt,
+        });
+        record.id = id;
+      }
+    }
 
     const updatedRecord = {
       ...record,
