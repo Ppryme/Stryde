@@ -225,6 +225,19 @@ export default function OnboardingClient() {
     <div className="min-h-dvh flex flex-col px-4 py-6 sm:px-6 sm:py-10 max-w-xl mx-auto justify-between bg-bento-bg">
       {/* Progress indicators & back arrow */}
       <div className="relative flex items-center justify-center mb-6 w-full min-h-[40px]">
+        
+          <button
+            onClick={() => {
+              setError("");
+              setStep((prev) => prev + 1);
+            }}
+            className="absolute right-0 p-2 text-bento-muted hover:text-bento-text transition-colors rounded-xl hover:bg-bento-card border border-bento-border flex items-center justify-center"
+            aria-label="Go back"
+          >
+            <ChevronRight className="w-5 h-5" />
+          </button>
+       
+
         {step > 0 && (
           <button
             onClick={() => {
