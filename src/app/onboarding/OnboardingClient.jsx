@@ -19,26 +19,35 @@ import checkinMockup from "@/assets/images/checkin-mockup.png";
 import goalsMockup from "@/assets/images/goals-mockup.png";
 import analyticsMockup from "@/assets/images/analytics-mockup.png";
 
+import dashboardDesktop from "@/assets/images/desktop image -dashboard.png";
+import checkinDesktop from "@/assets/images/checkin image.png";
+import goalsDesktop from "@/assets/images/desktop image -goals.png";
+import analyticsDesktop from "@/assets/images/desktop image - Analytics.png";
+
 const SLIDES = [
   {
     title: "Track Your Progress",
     description: "Build habits every day and watch your consistency grow.",
-    image: dashboardMockup,
+    phoneImage: dashboardMockup,
+    desktopImage: dashboardDesktop,
   },
   {
     title: "Daily Check-ins",
     description: "One tap every day keeps your streak alive.",
-    image: checkinMockup,
+    phoneImage: checkinMockup,
+    desktopImage: checkinDesktop,
   },
   {
     title: "Goals",
     description: "Break big goals into small daily tasks.",
-    image: goalsMockup,
+    phoneImage: goalsMockup,
+    desktopImage: goalsDesktop,
   },
   {
     title: "Analytics",
     description: "Stay motivated with visual progress and streaks.",
-    image: analyticsMockup,
+    phoneImage: analyticsMockup,
+    desktopImage: analyticsDesktop,
   },
 ];
 
@@ -222,9 +231,13 @@ export default function OnboardingClient() {
   const currentSlide = SLIDES[step];
 
   return (
-    <div className="min-h-dvh flex flex-col px-4 py-6 sm:px-6 sm:py-10 max-w-xl mx-auto justify-between bg-bento-bg">
+    <div
+      className={`min-h-dvh flex flex-col px-4 py-6 sm:px-6 sm:py-10 mx-auto justify-between bg-bento-bg transition-all duration-300 ${
+        step < 4 ? "max-w-xl lg:max-w-4xl" : "max-w-xl"
+      }`}
+    >
       {/* Progress indicators & back arrow */}
-      <div className="relative flex items-center justify-center mb-6 w-full min-h-[40px]">
+      <div className="relative flex items-center justify-center mb-6 w-full min-h-[40px] max-w-xl mx-auto">
         
           <button
             onClick={() => {
@@ -274,30 +287,46 @@ export default function OnboardingClient() {
               transition={{ duration: 0.3 }}
               className="flex flex-col items-center text-center w-full"
             >
-              <h2 className="text-2xl sm:text-3xl font-black text-bento-text tracking-tight mb-2">
+              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black text-bento-text tracking-tight mb-2">
                 {currentSlide.title}
               </h2>
-              <p className="text-sm sm:text-base text-bento-muted max-w-sm mb-6 leading-relaxed">
+              <p className="text-sm sm:text-base text-bento-muted max-w-md mb-6 leading-relaxed">
                 {currentSlide.description}
               </p>
 
-              {/* Phone Mockup Frame */}
+              {/* Mockup Frame (Phone on mobile/tablet, Desktop on laptop) */}
               <div className="relative w-full flex items-center justify-center py-4 my-2">
                 {/* Purple radial glow */}
-                <div className="absolute w-[240px] h-[240px] sm:w-[280px] sm:h-[280px] rounded-full bg-gradient-to-tr from-stryde-primary/30 to-transparent blur-3xl opacity-70 pointer-events-none" />
+                <div className="absolute w-[240px] h-[240px] sm:w-[280px] sm:h-[280px] lg:w-[520px] lg:h-[320px] rounded-full bg-gradient-to-tr from-stryde-primary/30 to-transparent blur-3xl opacity-70 pointer-events-none" />
 
-                {/* Styled device card */}
+                {/* Phone Mockup Frame (Mobile to Tablet screen sizes: < lg) */}
                 <motion.div
                   animate={{ y: [0, -8, 0] }}
                   transition={{ repeat: Infinity, duration: 4.5, ease: "easeInOut" }}
-                  className="relative z-10 w-[210px] sm:w-[245px] aspect-[9/18.5] rounded-[36px] border-[6px] border-bento-border bg-bento-card shadow-[0_20px_50px_rgba(83,74,183,0.25),_0_15px_30px_rgba(0,0,0,0.8)] overflow-hidden flex items-center justify-center"
+                  className="flex lg:hidden relative z-10 w-[210px] sm:w-[245px] aspect-[9/18.5] rounded-[36px] border-[6px] border-bento-border bg-bento-card shadow-[0_20px_50px_rgba(83,74,183,0.25),_0_15px_30px_rgba(0,0,0,0.8)] overflow-hidden items-center justify-center"
                 >
                   <Image
-                    src={currentSlide.image}
+                    src={currentSlide.phoneImage}
                     alt={currentSlide.title}
                     priority
                     className="w-full h-full object-cover"
                   />
+                </motion.div>
+
+                {/* Desktop Mockup Frame (Laptop screen sizes: lg+) */}
+                <motion.div
+                  animate={{ y: [0, -8, 0] }}
+                  transition={{ repeat: Infinity, duration: 4.5, ease: "easeInOut" }}
+                  className="hidden lg:flex relative z-10 w-full max-w-[700px] xl:max-w-[780px] rounded-[24px] border-[6px] border-bento-border bg-bento-card shadow-[0_20px_50px_rgba(83,74,183,0.25),_0_15px_30px_rgba(0,0,0,0.8)] overflow-hidden items-center justify-center p-2"
+                >
+                  <div className="w-full h-full rounded-[16px] overflow-hidden bg-bento-bg flex items-center justify-center">
+                    <Image
+                      src={currentSlide.desktopImage}
+                      alt={`${currentSlide.title} desktop preview`}
+                      priority
+                      className="w-full h-auto max-h-[380px] xl:max-h-[420px] object-contain rounded-[14px]"
+                    />
+                  </div>
                 </motion.div>
               </div>
             </motion.div>
@@ -516,7 +545,7 @@ export default function OnboardingClient() {
       </div>
 
       {/* Button Controls */}
-      <div className="mt-8 flex flex-col gap-3 w-full">
+      <div className="mt-8 flex flex-col gap-3 w-full max-w-xl mx-auto">
         <FormError message={error} className="mt-0 text-center" />
         
         {step < 5 ? (
