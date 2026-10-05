@@ -1,7 +1,4 @@
-/**
- * 404 Not Found page — App Router not-found.jsx.
- * Shown when notFound() is called or a route segment has no match.
- */
+
 export default function NotFound() {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-6 text-center bg-bento-bg">
