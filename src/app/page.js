@@ -34,7 +34,7 @@ async function getStarted() {
 export default async function HomePage() {
   const supabase = await createClient();
   const {
-    data: { user },
+    data: { user }
   } = await supabase.auth.getUser();
 
   if (user?.user_metadata?.onboarded) {
