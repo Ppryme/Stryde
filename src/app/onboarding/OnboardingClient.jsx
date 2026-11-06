@@ -19,10 +19,10 @@ import checkinMockup from "@/assets/images/checkin-mockup.png";
 import goalsMockup from "@/assets/images/goals-mockup.png";
 import analyticsMockup from "@/assets/images/analytics-mockup.png";
 
-import dashboardDesktop from "@/assets/images/desktop-image-Analytics.png";
+import dashboardDesktop from "@/assets/images/desktop-image-dashboard.png";
 import checkinDesktop from "@/assets/images/checkin-image.png";
-import goalsDesktop from "@/assets/images/desktoP-image-goals.png";
-import analyticsDesktop from "@/assets/images/desktop-image-Analytics.png";
+import goalsDesktop from "@/assets/images/desktop-image-goals.png";
+import analyticsDesktop from "@/assets/images/desktop-image-analytics.png";
 
 const SLIDES = [
   {
