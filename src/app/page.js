@@ -11,7 +11,7 @@ async function getStarted() {
   "use server";
 
   const cookieStore = await cookies();
-  cookieStore.set(LANDING_SEEN_COOKIE, "true", {
+  cookieStore.set(LANDING_SEEN_COOKIE, "false", {
     httpOnly: true,
     sameSite: "lax",
     path: "/",
