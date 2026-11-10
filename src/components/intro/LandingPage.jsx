@@ -1,3 +1,4 @@
+"use client";
 import Image from "next/image";
 import strydeImage from "@/assets/images/stryde-logo .png";
 
@@ -21,18 +22,19 @@ export default function LandingPage({getStarted}) {
                       src={strydeImage}
                       alt="Stryde"
                       priority
-                      className="w-full max-w-[280px] sm:max-w-[380px] lg:max-w-[460px] h-auto object-contain"
+                      className="w-full max-w-70 sm:max-w-95 lg:max-w-115 h-auto object-contain"
                     />
                   </div>
 
-        <form action={getStarted} className="w-full">
+        
           <button
+          onClick={getStarted}
             type="submit"
             className="w-full rounded-xl bg-stryde-primary px-5 py-4 text-sm font-semibold text-white"
           >
             Get Started
           </button>
-        </form>
+      
       </section>
     </main>
   );

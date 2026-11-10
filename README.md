@@ -1,5 +1,179 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
 
+## Project Structure
+
+```
+stryde/
+├── public/
+│   ├── file.svg
+│   ├── globe.svg
+│   ├── manifest.json
+│   ├── next.svg
+│   ├── stryde-dashboard-mockup.png
+│   ├── stryde-logo.png
+│   ├── stryde-logo1 (1).png
+│   ├── vercel.svg
+│   └── window.svg
+├── src/
+│   ├── app/
+│   │   ├── (app)/                          # Authenticated app route group
+│   │   │   ├── analytics/
+│   │   │   │   ├── loading.jsx
+│   │   │   │   └── page.jsx
+│   │   │   ├── checkin/
+│   │   │   │   ├── loading.jsx
+│   │   │   │   └── page.jsx
+│   │   │   ├── dashboard/
+│   │   │   │   ├── loading.jsx
+│   │   │   │   └── page.jsx
+│   │   │   ├── goals/
+│   │   │   │   ├── new/
+│   │   │   │   │   └── page.jsx
+│   │   │   │   ├── loading.jsx
+│   │   │   │   └── page.jsx
+│   │   │   ├── habits/
+│   │   │   │   ├── new/
+│   │   │   │   │   └── page.jsx
+│   │   │   │   └── page.jsx
+│   │   │   ├── error.jsx
+│   │   │   ├── layout.jsx
+│   │   │   └── loading.jsx
+│   │   ├── actions/
+│   │   │   └── goalActions.js
+│   │   ├── api/
+│   │   │   └── health/
+│   │   │       └── route.js
+│   │   ├── auth/
+│   │   │   └── callback/
+│   │   │       └── route.js
+│   │   ├── intro/
+│   │   │   ├── layout.jsx
+│   │   │   └── page.jsx
+│   │   ├── onboarding/
+│   │   │   ├── OnboardingClient.jsx
+│   │   │   └── page.jsx
+│   │   ├── privacy/
+│   │   │   └── page.jsx
+│   │   ├── sign-in/
+│   │   │   ├── SignInClient.jsx
+│   │   │   └── page.jsx
+│   │   ├── sign-up/
+│   │   │   └── page.jsx
+│   │   ├── terms/
+│   │   │   └── page.jsx
+│   │   ├── error.jsx
+│   │   ├── globals.css
+│   │   ├── icon.png
+│   │   ├── layout.js
+│   │   ├── not-found.jsx
+│   │   └── page.js
+│   ├── assets/
+│   │   └── images/
+│   │       ├── analytics-mockup.png
+│   │       ├── checkin-image.png
+│   │       ├── checkin-mockup.png
+│   │       ├── dashboard-mockup.png
+│   │       ├── desktop-image-analytics.png
+│   │       ├── desktop-image-dashboard.png
+│   │       ├── desktop-image-goals.png
+│   │       ├── goals-mockup.png
+│   │       └── stryde-logo.png
+│   ├── components/
+│   │   ├── analytics/
+│   │   │   ├── AnalyticsPageTracker.jsx
+│   │   │   ├── HeatmapCalendar.jsx
+│   │   │   ├── StatsTile.jsx
+│   │   │   └── TrendChart.jsx
+│   │   ├── checkin/
+│   │   │   ├── CheckInCard.jsx
+│   │   │   ├── checkInList.jsx
+│   │   │   ├── CheckInProgress.jsx
+│   │   │   └── CompletionCelebration.jsx
+│   │   ├── dasboard/
+│   │   │   └── DashboardClient.jsx
+│   │   ├── goals/
+│   │   │   ├── GoalCard.jsx
+│   │   │   ├── GoalCreateForm.jsx
+│   │   │   ├── GoalProgressBar.jsx
+│   │   │   └── GoalsPageTracker.jsx
+│   │   ├── habits/
+│   │   │   ├── HabitCard.jsx
+│   │   │   ├── HabitCreateForm.jsx
+│   │   │   ├── HabitList.jsx
+│   │   │   └── HabitsClient.jsx
+│   │   ├── intro/
+│   │   │   └── LandingPage.jsx
+│   │   ├── streaks/
+│   │   │   ├── StreakBadge.jsx
+│   │   │   └── StreakMilestone.jsx
+│   │   └── ui/
+│   │       ├── Reusable/
+│   │       │   ├── CheckInCelebrationModal.jsx
+│   │       │   ├── GlobalLoadingOverlay.jsx
+│   │       │   ├── MilestoneToast.jsx
+│   │       │   ├── ResetGlobalLoading.jsx
+│   │       │   ├── SignOutButton.jsx
+│   │       │   ├── Spinner.jsx
+│   │       │   ├── TargetDatePicker.jsx
+│   │       │   └── UndoPopup.jsx
+│   │       ├── AppShell.jsx
+│   │       ├── badge.jsx
+│   │       ├── BottomTabBar.jsx
+│   │       ├── button.jsx
+│   │       ├── card.jsx
+│   │       ├── EmptyState.jsx
+│   │       ├── FormError.jsx
+│   │       ├── FormLabel.jsx
+│   │       ├── Input.jsx
+│   │       ├── OfflineBanner.jsx
+│   │       ├── ProgressRing.jsx
+│   │       └── Textarea.jsx
+│   ├── hooks/
+│   │   ├── useAnalytics.js
+│   │   ├── useCheckins.js
+│   │   ├── useGoal.js
+│   │   ├── useHabit.js
+│   │   ├── useHabits.js
+│   │   ├── useOnline.js
+│   │   └── useStreak.js
+│   ├── lib/
+│   │   ├── auth.js
+│   │   ├── date.js
+│   │   ├── date-picker.js
+│   │   ├── db.js
+│   │   ├── design-token.js
+│   │   ├── env.js
+│   │   ├── goalUtils.js
+│   │   ├── streakUtils.js
+│   │   ├── supabase.js
+│   │   ├── supabase-server.js
+│   │   ├── sync.js
+│   │   └── ui-config.js
+│   ├── repositories/
+│   │   ├── checkInRepository.js
+│   │   ├── goalRepository.js
+│   │   ├── habitRepository.js
+│   │   ├── streakRepository.js
+│   │   └── userStreakRepository.js
+│   └── stores/
+│       └── useAppStore.js
+├── .env.local
+├── .gitattributes
+├── .gitignore
+├── AGENTS.md
+├── ARCHITECTURE.md
+├── eslint.config.mjs
+├── jsconfig.json
+├── next.config.mjs
+├── package.json
+├── package-lock.json
+├── postcss.config.mjs
+├── proxy.js
+├── README.md
+├── STRYDE_ROADMAP.md
+└── UX_GUIDELINES.md
+```
+
 ## Getting Started
 
 First, run the development server:

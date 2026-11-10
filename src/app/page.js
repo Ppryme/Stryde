@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase-server";
 import LandingPage from "@/components/intro/LandingPage"
 
 
-const LANDING_SEEN_COOKIE = "stryde_landing_seen";
+const LANDING_SEEN_COOKIE = "stryde_landingpage_seen";
 
 async function getStarted() {
   "use server";
