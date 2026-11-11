@@ -5,28 +5,45 @@ import { createClient } from "@/lib/supabase-server";
 import LandingPage from "@/components/intro/LandingPage"
 
 
-const LANDING_SEEN_COOKIE = "stryde_landingpage_seen";
+const LANDING_SEEN_COOKIE = "stryde_landing_seen";
 
 async function getStarted() {
   "use server";
 
   const cookieStore = await cookies();
+
   cookieStore.set(LANDING_SEEN_COOKIE, "true", {
     httpOnly: true,
     sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
     path: "/",
     maxAge: 60 * 60 * 24 * 365,
   });
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  let user;
+
+  try {
+    const supabase = await createClient();
+
+    const {
+      data: { user: authenticatedUser },
+      error,
+    } = await supabase.auth.getUser();
+
+    if (error) {
+      throw error;
+    }
+
+    user = authenticatedUser;
+
+  } catch (error) {
+    console.error("Error fetching user:", error);
+    return null;
+  }
 
   if (!user) {
     redirect("/sign-up");
   }
-
 }
 
 

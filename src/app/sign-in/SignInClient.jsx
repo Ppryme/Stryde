@@ -47,7 +47,7 @@ export default function SignInClient({authError}) {
     setError("");
 
     if (data.user?.user_metadata?.onboarded) {
-      router.push("/");
+      router.push("/dashboard");
     } else {
       router.push("/onboarding");
     }
