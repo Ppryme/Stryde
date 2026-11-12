@@ -1,4 +1,4 @@
-// src/middleware.js  ← must be at src/ root, NOT inside /app
+// proxy.js
 // ─────────────────────────────────────────────
 // MIDDLEWARE — route protection
 // Runs on every request BEFORE the page loads
@@ -8,7 +8,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse } from "next/server";
 
 // Routes that DON'T need a logged-in user
-const PUBLIC_ROUTES = ["/sign-in", "/sign-up", "/auth/callback", "/terms", "/privacy"];
+const PUBLIC_ROUTES = ["/", "/sign-in", "/sign-up", "/auth/callback", "/terms", "/privacy"];
 
 export async function proxy(request) {
   const { pathname } = request.nextUrl;

@@ -31,12 +31,24 @@ export async function signIn(email, password) {
 }
 
 // Sign in with Google OAuth
-export async function signInWithGoogle() {
+export async function signInWithGoogle(authType="sign-in") {
   const supabase = getSupabase();
   const { error } = await supabase.auth.signInWithOAuth({
     provider: "google",
     options: {
-      redirectTo: `${window.location.origin}/auth/callback`,
+     redirectTo: `${window.location.origin}/auth/callback?next=${authType}`,
+    },
+  });
+  return { error };
+}
+
+// Sign up with Google OAuth
+export async function signUpWithGoogle(authType="sign-up") {
+  const supabase = getSupabase();
+  const { error } = await supabase.auth.signInWithOAuth({
+    provider: "google",
+    options: {
+     redirectTo: `${window.location.origin}/auth/callback?next=${authType}`,
     },
   });
   return { error };

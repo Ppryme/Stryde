@@ -208,3 +208,94 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+
+
+
+
+## Table `habits`
+
+### Columns
+
+| Name | Type | Constraints |
+|------|------|-------------|
+| `id` | `uuid` | Primary |
+| `user_id` | `uuid` |  Nullable |
+| `name` | `text` |  |
+| `frequency` | `text` |  Nullable |
+| `category` | `text` |  Nullable |
+| `color_tag` | `text` |  Nullable |
+| `reminder_time` | `time` |  Nullable |
+| `order_index` | `int4` |  Nullable |
+| `archived` | `bool` |  Nullable |
+| `created_at` | `timestamptz` |  Nullable |
+
+## Table `goals`
+
+### Columns
+
+| Name | Type | Constraints |
+|------|------|-------------|
+| `id` | `uuid` | Primary |
+| `user_id` | `uuid` |  Nullable |
+| `title` | `text` |  |
+| `description` | `text` |  Nullable |
+| `target_date` | `date` |  Nullable |
+| `progress_pct` | `int4` |  Nullable |
+| `status` | `text` |  Nullable |
+| `created_at` | `timestamptz` |  Nullable |
+
+## Table `check_ins`
+
+### Columns
+
+| Name | Type | Constraints |
+|------|------|-------------|
+| `id` | `uuid` | Primary |
+| `habit_id` | `uuid` |  Nullable |
+| `user_id` | `uuid` |  Nullable |
+| `date` | `date` |  |
+| `completed` | `bool` |  Nullable |
+| `note` | `text` |  Nullable |
+| `created_at` | `timestamptz` |  Nullable |
+
+## Table `streaks`
+
+### Columns
+
+| Name | Type | Constraints |
+|------|------|-------------|
+| `id` | `uuid` | Primary |
+| `habit_id` | `uuid` |  Nullable Unique |
+| `user_id` | `uuid` |  Nullable |
+| `current_streak` | `int4` |  Nullable |
+| `longest_streak` | `int4` |  Nullable |
+| `last_checked_in` | `date` |  Nullable |
+| `updated_at` | `timestamptz` |  Nullable |
+
+## RLS Policies
+
+### `habits`
+
+| Policy | Command | Roles | Action | USING | WITH CHECK |
+|--------|---------|-------|--------|-------|------------|
+| `own habits` | ALL | public | PERMISSIVE | `(auth.uid() = user_id)` | — |
+
+### `goals`
+
+| Policy | Command | Roles | Action | USING | WITH CHECK |
+|--------|---------|-------|--------|-------|------------|
+| `own goals` | ALL | public | PERMISSIVE | `(auth.uid() = user_id)` | — |
+
+### `check_ins`
+
+| Policy | Command | Roles | Action | USING | WITH CHECK |
+|--------|---------|-------|--------|-------|------------|
+| `own check_ins` | ALL | public | PERMISSIVE | `(auth.uid() = user_id)` | — |
+
+### `streaks`
+
+| Policy | Command | Roles | Action | USING | WITH CHECK |
+|--------|---------|-------|--------|-------|------------|
+| `own streaks` | ALL | public | PERMISSIVE | `(auth.uid() = user_id)` | — |
+

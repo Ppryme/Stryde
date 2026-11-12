@@ -16,7 +16,11 @@ export default function SignInClient({authError}) {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(authError || "");
+ const [error, setError] = useState(
+  authError === "auth_failed"
+    ? "Google sign-in failed. Please try again."
+    : ""
+);
   const showLoading = useAppStore((state) => state.showLoading);
   const hideLoading = useAppStore((state) => state.hideLoading);
   const resetStore = useAppStore((state) => state.resetStore);
@@ -31,8 +35,7 @@ export default function SignInClient({authError}) {
       return;
     }
 
-   
-
+  
     const { data, error } = await signIn(email, password);
 
     if (error) {
@@ -55,7 +58,7 @@ export default function SignInClient({authError}) {
 
   async function handleGoogle() {
     setLoading(true);
-    const { error: authError } = await signInWithGoogle();
+    const { error: authError } = await signInWithGoogle("sign-in");
     if (authError) setError(authError.message);
     setLoading(false);
   }
@@ -102,7 +105,7 @@ export default function SignInClient({authError}) {
           </div>
         </div>
 
-        <FormError message={error} className="mt-0" />
+        <FormError message={error === "failed to fetch" ? "Connection error. Please try again." : error} className="mt-0" />
 
         <Button onClick={handleSubmit} disabled={loading || !email.trim() || !password.trim()} className="w-full py-4 rounded-xl text-sm">
           {loading ? "Signing in..." : "Sign In"}
