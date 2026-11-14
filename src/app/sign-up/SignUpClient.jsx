@@ -105,7 +105,7 @@ export default function SignUpPage() {
               type="button"
               onClick={() => setShowPassword((prev) => !prev)}
               aria-label={showPassword ? "Hide password" : "Show password"}
-              className="absolute in set-y-0 right-0 flex items-center px-4 text-xs font-medium text-bento-muted"
+              className="absolute inset-y-0 right-0 flex items-center px-4 text-xs font-medium text-bento-muted"
             >
               {showPassword ? "Hide" : "Show"}
             </button>
