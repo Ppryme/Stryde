@@ -1,58 +1,58 @@
 // proxy.js
 // ─────────────────────────────────────────────
-// MIDDLEWARE — route protection
+// PROXY / MIDDLEWARE — route protection
 // Runs on every request BEFORE the page loads
 // Redirects unauthenticated users to /sign-in
 // ─────────────────────────────────────────────
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse } from "next/server";
 
-// Routes that DON'T need a logged-in user
-const PUBLIC_ROUTES = ["/", "/sign-in", "/sign-up", "/auth/callback", "/terms", "/privacy"];
+// Public route prefixes that DON'T need a logged-in user
+const PUBLIC_PREFIXES = ["/sign-in", "/sign-up", "/auth/callback", "/terms", "/privacy"];
 
 export async function proxy(request) {
   const { pathname } = request.nextUrl;
 
-  // Allow public routes through without checking auth
-  if (PUBLIC_ROUTES.some((route) => pathname.startsWith(route))) {
+  // Allow public routes through without checking auth:
+  // Root "/" is exact (landing / auth dispatch); others match by prefix
+  const isPublic = pathname === "/" || PUBLIC_PREFIXES.some((prefix) => pathname.startsWith(prefix));
+  if (isPublic) {
     return NextResponse.next();
   }
 
+  // Create a Supabase client that can read/write cookies in proxy
+  let response = NextResponse.next({ request });
 
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll();
+        },
 
-  // Create a Supabase client that can read/write cookies in middleware
-let response = NextResponse.next({ request });
+        setAll(cookiesToSet) {
+          // Update cookies on the incoming request
+          cookiesToSet.forEach(({ name, value }) => {
+            request.cookies.set(name, value);
+          });
 
-const supabase = createServerClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-  {
-    cookies: {
-      getAll() {
-        return request.cookies.getAll();
+          // Recreate the response with the updated request
+          response = NextResponse.next({ request });
+
+          // Send updated cookies back to the browser
+          cookiesToSet.forEach(({ name, value, options }) => {
+            response.cookies.set(name, value, options);
+          });
+        },
       },
-
-      setAll(cookiesToSet) {
-        // Update cookies on the incoming request
-        cookiesToSet.forEach(({ name, value }) => {
-          request.cookies.set(name, value);
-        });
-
-        // Recreate the response with the updated request
-        response = NextResponse.next({ request });
-
-        // Send updated cookies back to the browser
-        cookiesToSet.forEach(({ name, value, options }) => {
-          response.cookies.set(name, value, options);
-        });
-      },
-    },
-  }
-);
+    }
+  );
 
   const { data: { user } } = await supabase.auth.getUser();
 
-  // Not logged in → send to onboarding/login
+  // Not logged in → send to login
   if (!user) {
     return NextResponse.redirect(new URL("/sign-in", request.url));
   }

@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase-server";
-import { redirect } from "next/navigation";
+import { requireOnboardedUser } from "@/lib/auth-server";
 import { getLocalDateString, getGreeting } from "@/lib/date";
 import CheckInList from "@/components/checkin/checkInList";
 import SignOutButton from "@/components/ui/Reusable/SignOutButton";
@@ -7,25 +7,38 @@ import SignOutButton from "@/components/ui/Reusable/SignOutButton";
 export const metadata = { title: "Check in" };
 
 export default async function CheckInPage() {
+  const user = await requireOnboardedUser();
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/sign-in");
 
   const today = getLocalDateString();
 
-  const { data: habits } = await supabase
-    .from("habits")
-    .select("*")
-    .eq("user_id", user.id)
-    .eq("archived", false)
-    .eq("frequency", "daily")
-    .order("order_index", { ascending: true });
+  const [
+    { data: habits, error: habitsError },
+    { data: checkIns, error: checkInsError },
+  ] = await Promise.all([
+    supabase
+      .from("habits")
+      .select("*")
+      .eq("user_id", user.id)
+      .eq("archived", false)
+      .eq("frequency", "daily")
+      .order("order_index", { ascending: true }),
+    supabase
+      .from("check_ins")
+      .select("habit_id, completed, note")
+      .eq("user_id", user.id)
+      .eq("date", today),
+  ]);
 
-  const { data: checkIns } = await supabase
-    .from("check_ins")
-    .select("habit_id, completed, note")
-    .eq("user_id", user.id)
-    .eq("date", today);
+  if (habitsError) {
+    console.error("Error loading habits on check-in page:", habitsError);
+    throw new Error(`Failed to load habits: ${habitsError.message}`);
+  }
+
+  if (checkInsError) {
+    console.error("Error loading check-ins on check-in page:", checkInsError);
+    throw new Error(`Failed to load check-ins: ${checkInsError.message}`);
+  }
 
   const checkInMap = {};
   (checkIns ?? []).forEach((c) => {

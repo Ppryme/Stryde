@@ -218,7 +218,7 @@ export default function OnboardingClient() {
         return;
       }
 
-      router.push("/");
+      router.push("/dashboard");
     } catch (err) {
       console.error("Onboarding submission failed:", err);
       setError("An unexpected error occurred. Please try again.");
@@ -237,7 +237,7 @@ export default function OnboardingClient() {
       }`}
     >
       {/* Progress indicators & back arrow */}
-      <div className="relative flex items-center justify-center mb-6 w-full min-h-[40px] max-w-xl mx-auto">
+      <div className="relative flex items-center justify-center mb-6 w-full min-h-10 max-w-xl mx-auto">
         
           <button
             onClick={() => {

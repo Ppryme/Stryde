@@ -20,3 +20,17 @@ This document tracks issues, bugs, and errors encountered during development, al
   * Ensure consistent cookie naming and deterministic redirect logic across routes.
 
 ---
+
+## 2. Silent Empty States on Supabase Query Errors
+
+* **Issue:**
+  * When a network drop, query timeout, or Supabase error/RLS violation occurred, server components silently rendered empty states (e.g., displaying "No goals set" or 0 habits), leading users to believe their data was lost or deleted.
+* **Root Causes:**
+  * Server components destructured `{ data }` while omitting `{ error }` from Supabase queries without error checking (e.g. `const { data: habits } = await supabase.from(...).select(...)`).
+  * On error, `data` was `null`, causing code to fall back to `[]` and render empty states instead of triggering an error boundary.
+* **Fix & Prevention:**
+  * Always destructure `{ data, error }` from Supabase server queries.
+  * Run independent queries in parallel using `Promise.all` and verify the `error` property on each result.
+  * Throw explicit descriptive errors on failure so the Next.js `(app)/error.jsx` boundary catches them and displays a user-friendly error UI with a "Try again" action.
+
+---

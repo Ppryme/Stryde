@@ -5,7 +5,7 @@
 // Same pattern as habits/page.jsx
 // ─────────────────────────────────────────────
 import { createClient } from "@/lib/supabase-server";
-import { redirect } from "next/navigation";
+import { requireOnboardedUser } from "@/lib/auth-server";
 import Link from "next/link";
 import GoalCard from "@/components/goals/GoalCard";
 import GoalsPageTracker from "@/components/goals/GoalsPageTracker";
@@ -15,15 +15,19 @@ import SignOutButton from "@/components/ui/Reusable/SignOutButton";
 export const metadata = { title: "Goals" };
 
 export default async function GoalsPage() {
+  const user = await requireOnboardedUser();
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/sign-in");
 
-  const { data: goals } = await supabase
+  const { data: goals, error: goalsError } = await supabase
     .from("goals")
     .select("*")
     .eq("user_id", user.id)
     .order("created_at", { ascending: false });
+
+  if (goalsError) {
+    console.error("Error loading goals:", goalsError);
+    throw new Error(`Failed to load goals: ${goalsError.message}`);
+  }
 
   // Split into active vs history (completed/almost-there/missed/archived)
   const activeGoals = (goals ?? []).filter((g) => g.status === "active");

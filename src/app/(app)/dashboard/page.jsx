@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase-server";
-import { redirect } from "next/navigation";
+import { requireOnboardedUser } from "@/lib/auth-server";
 import { getLocalDateString, getGreeting } from "@/lib/date";
 import DashboardClient from "@/components/dasboard/DashboardClient";
 import GoalCard from "@/components/goals/GoalCard";
@@ -9,38 +9,54 @@ import SignOutButton from "@/components/ui/Reusable/SignOutButton";
 export const dynamic = "force-dynamic";
 
 export default async function DashboardHome() {
+  const user = await requireOnboardedUser();
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/sign-in");
 
   const today = getLocalDateString();
 
-  const { data: habits } = await supabase
-    .from("habits")
-    .select("*")
-    .eq("user_id", user.id)
-    .eq("archived", false)
-    .eq("frequency", "daily")
-    .order("order_index", { ascending: true });
+  const [
+    { data: habits, error: habitsError },
+    { data: checkIns, error: checkInsError },
+    { data: goals, error: goalsError },
+  ] = await Promise.all([
+    supabase
+      .from("habits")
+      .select("*")
+      .eq("user_id", user.id)
+      .eq("archived", false)
+      .eq("frequency", "daily")
+      .order("order_index", { ascending: true }),
+    supabase
+      .from("check_ins")
+      .select("habit_id, completed")
+      .eq("user_id", user.id)
+      .eq("date", today),
+    supabase
+      .from("goals")
+      .select("*")
+      .eq("user_id", user.id)
+      .eq("status", "active")
+      .order("created_at", { ascending: false }),
+  ]);
 
-  const { data: checkIns } = await supabase
-    .from("check_ins")
-    .select("habit_id, completed")
-    .eq("user_id", user.id)
-    .eq("date", today);
+  if (habitsError) {
+    console.error("Error loading habits on dashboard:", habitsError);
+    throw new Error(`Failed to load habits: ${habitsError.message}`);
+  }
+
+  if (checkInsError) {
+    console.error("Error loading check-ins on dashboard:", checkInsError);
+    throw new Error(`Failed to load check-ins: ${checkInsError.message}`);
+  }
+
+  if (goalsError) {
+    console.error("Error loading active goals on dashboard:", goalsError);
+    throw new Error(`Failed to load goals: ${goalsError.message}`);
+  }
 
   const checkedIds = (checkIns ?? [])
     .filter((c) => c.completed)
     .map((c) => c.habit_id);
-
-  const { data: goals } = await supabase
-    .from("goals")
-    .select("*")
-    .eq("user_id", user.id)
-    .eq("status", "active")
-    .order("created_at", { ascending: false });
 
   return (
     <div className="px-4 pt-10 pb-6 flex flex-col gap-6 mx-auto max-w-6xl sm:px-6 lg:px-8">

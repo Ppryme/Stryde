@@ -1,9 +1,7 @@
-
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase-server";
-import LandingPage from "@/components/intro/LandingPage"
-
+import LandingPage from "@/components/intro/LandingPage";
+import { getUser } from "@/lib/auth-server";
 
 const LANDING_SEEN_COOKIE = "stryde_landing_seen";
 
@@ -20,42 +18,28 @@ async function getStarted() {
     maxAge: 60 * 60 * 24 * 365,
   });
 
-  let user;
-
-  try {
-    const supabase = await createClient();
-
-    const {
-      data: { user: authenticatedUser },
-      error,
-    } = await supabase.auth.getUser();
-
-    if (error) {
-      throw error;
-    }
-
-    user = authenticatedUser;
-
-  } catch (error) {
-    console.error("Error fetching user:", error);
-    return null;
-  }
+  const user = await getUser();
 
   if (!user) {
-    redirect("/sign-up");
+    redirect("/sign-in");
+  }
+
+  if (user.user_metadata?.onboarded) {
+    redirect("/dashboard");
+  } else {
+    redirect("/onboarding");
   }
 }
 
-
-
 export default async function HomePage() {
-  const supabase = await createClient();
-  const {
-    data: { user }
-  } = await supabase.auth.getUser();
+  const user = await getUser();
 
   if (user?.user_metadata?.onboarded) {
-   redirect("/dashboard") ;
+    redirect("/dashboard");
+  }
+
+  if (user && !user.user_metadata?.onboarded) {
+    redirect("/onboarding");
   }
 
   const cookieStore = await cookies();
@@ -63,7 +47,7 @@ export default async function HomePage() {
 
   if (hasSeenLanding) {
     redirect("/sign-in");
-  }
+  } 
 
   return <LandingPage getStarted={getStarted} />;
 }

@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase-server";
-import { redirect } from "next/navigation";
+import { requireOnboardedUser } from "@/lib/auth-server";
 import HeatmapCalendar from "@/components/analytics/HeatmapCalendar";
 import TrendChart from "@/components/analytics/TrendChart";
 import { getOneYearAgoDate } from "@/lib/date";
@@ -10,36 +10,53 @@ import { computeOverallStreakFromCheckIns } from "@/lib/streakUtils";
 export const metadata = { title: "Analytics" };
 
 export default async function AnalyticsPage() {
+  const user = await requireOnboardedUser();
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/sign-in");
 
   const oneYearAgo = getOneYearAgoDate();
 
-  // Fetch check-ins for the past year (used for heatmap, trend chart, and streak)
-  const { data: checkIns } = await supabase
-    .from("check_ins")
-    .select("date, completed, habit_id")
-    .eq("user_id", user.id)
-    .gte("date", oneYearAgo)
-    .order("date", { ascending: true });
+  // Fetch check-ins and active habits in parallel
+  const [
+    { data: checkIns, error: checkInsError },
+    { data: allCheckIns, error: allCheckInsError },
+    { data: habits, error: habitsError },
+  ] = await Promise.all([
+    // Check-ins for the past year (used for heatmap, trend chart, and streak)
+    supabase
+      .from("check_ins")
+      .select("date, completed, habit_id")
+      .eq("user_id", user.id)
+      .gte("date", oneYearAgo)
+      .order("date", { ascending: true }),
+    // ALL completed check-ins (not just past year) for accurate longest streak
+    supabase
+      .from("check_ins")
+      .select("date, completed, habit_id")
+      .eq("user_id", user.id)
+      .order("date", { ascending: true }),
+    // Active daily habits required to evaluate streak
+    supabase
+      .from("habits")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("frequency", "daily")
+      .eq("archived", false),
+  ]);
 
-  // Fetch ALL completed check-ins (not just past year) for accurate longest streak.
-  // We need the full history to find a run that might span before the one-year window.
-  const { data: allCheckIns } = await supabase
-    .from("check_ins")
-    .select("date, completed, habit_id")
-    .eq("user_id", user.id)
-    .order("date", { ascending: true });
+  if (checkInsError) {
+    console.error("Error loading year check-ins for analytics:", checkInsError);
+    throw new Error(`Failed to load check-ins: ${checkInsError.message}`);
+  }
 
-  // Fetch active daily habits — required by computeOverallStreakFromCheckIns to know
-  // what "a fully complete day" means (all active daily habits must be checked off).
-  const { data: habits } = await supabase
-    .from("habits")
-    .select("id")
-    .eq("user_id", user.id)
-    .eq("frequency", "daily")
-    .eq("archived", false);
+  if (allCheckInsError) {
+    console.error("Error loading full check-ins history for analytics:", allCheckInsError);
+    throw new Error(`Failed to load historical check-ins: ${allCheckInsError.message}`);
+  }
+
+  if (habitsError) {
+    console.error("Error loading habits for analytics:", habitsError);
+    throw new Error(`Failed to load habits: ${habitsError.message}`);
+  }
 
   // ── Overall streak — SAME algorithm as the Dashboard ──────────────────────
   // Uses the shared pure helper so Dashboard badge and Analytics always agree.
