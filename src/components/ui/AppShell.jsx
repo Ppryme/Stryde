@@ -8,15 +8,10 @@ import UndoPopup from "@/components/ui/Reusable/UndoPopup";
 import MilestoneToast from "@/components/ui/Reusable/MilestoneToast";
 import CheckInCelebrationModal from "@/components/ui/Reusable/CheckInCelebrationModal";
 import ResetGlobalLoading from "./Reusable/ResetGlobalLoading";
-import useAppStore from "@/stores/useAppStore";
 import { syncQueue } from "@/lib/sync";
-import { db } from "@/lib/db";
 import { validateEnv } from "@/lib/env";
 
 export default function AppShell({ children }) {
-  const showLoading = useAppStore((state) => state.showLoading);
-  const hideLoading = useAppStore((state) => state.hideLoading);
-
   // Validate env variables on startup
   useEffect(() => {
     validateEnv();
@@ -25,21 +20,10 @@ export default function AppShell({ children }) {
   useEffect(() => {
     async function checkAndSync() {
       if (navigator.onLine) {
-        const pending = await db.queue.toArray();
-        if (pending.length > 0) {
-          showLoading("Syncing offline changes...");
-          const start = Date.now();
-          try {
-            await syncQueue();
-          } catch (err) {
-            console.error("Sync failed", err);
-          } finally {
-            const elapsed = Date.now() - start;
-            if (elapsed < 800) {
-              await new Promise((r) => setTimeout(r, 800 - elapsed));
-            }
-            hideLoading();
-          }
+        try {
+          await syncQueue();
+        } catch (err) {
+          console.error("Sync failed", err);
         }
       }
     }
@@ -50,7 +34,7 @@ export default function AppShell({ children }) {
     return () => {
       window.removeEventListener("online", checkAndSync);
     };
-  }, [showLoading, hideLoading]);
+  }, []);
 
   return (
     <>

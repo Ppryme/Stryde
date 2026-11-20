@@ -6,6 +6,7 @@
 // ─────────────────────────────────────────────
 import { createClient } from "@/lib/supabase-server";
 import { requireOnboardedUser } from "@/lib/auth-server";
+import { fetchActiveHabitsForGoalLinking } from "@/data/remote/habitRemoteData";
 import GoalCreateForm from "@/components/goals/GoalCreateForm";
 
 export const metadata = { title: "New Goal" };
@@ -15,13 +16,10 @@ export default async function NewGoalPage() {
   const supabase = await createClient();
 
   // Fetch user's habits so they can optionally link this goal to one
-  const { data: habits, error: habitsError } = await supabase
-    .from("habits")
-    .select("id, name, category")
-    .eq("user_id", user.id)
-    .eq("archived", false);
-
-  if (habitsError) {
+  let habits = [];
+  try {
+    habits = await fetchActiveHabitsForGoalLinking(supabase, user.id);
+  } catch (habitsError) {
     console.error("Error loading habits for new goal page:", habitsError);
     throw new Error(`Failed to load habits: ${habitsError.message}`);
   }

@@ -6,6 +6,7 @@
 // ─────────────────────────────────────────────
 import { createClient } from "@/lib/supabase-server";
 import { requireOnboardedUser } from "@/lib/auth-server";
+import { fetchAllGoals } from "@/data/remote/goalRemoteData";
 import Link from "next/link";
 import GoalCard from "@/components/goals/GoalCard";
 import GoalsPageTracker from "@/components/goals/GoalsPageTracker";
@@ -18,13 +19,10 @@ export default async function GoalsPage() {
   const user = await requireOnboardedUser();
   const supabase = await createClient();
 
-  const { data: goals, error: goalsError } = await supabase
-    .from("goals")
-    .select("*")
-    .eq("user_id", user.id)
-    .order("created_at", { ascending: false });
-
-  if (goalsError) {
+  let goals = [];
+  try {
+    goals = await fetchAllGoals(supabase, user.id);
+  } catch (goalsError) {
     console.error("Error loading goals:", goalsError);
     throw new Error(`Failed to load goals: ${goalsError.message}`);
   }

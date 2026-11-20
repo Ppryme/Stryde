@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase-server";
 import { requireOnboardedUser } from "@/lib/auth-server";
+import { fetchActiveDailyHabitIds } from "@/data/remote/habitRemoteData";
 import HeatmapCalendar from "@/components/analytics/HeatmapCalendar";
 import TrendChart from "@/components/analytics/TrendChart";
 import { getOneYearAgoDate } from "@/lib/date";
@@ -19,7 +20,7 @@ export default async function AnalyticsPage() {
   const [
     { data: checkIns, error: checkInsError },
     { data: allCheckIns, error: allCheckInsError },
-    { data: habits, error: habitsError },
+    habitsResult,
   ] = await Promise.all([
     // Check-ins for the past year (used for heatmap, trend chart, and streak)
     supabase
@@ -35,13 +36,12 @@ export default async function AnalyticsPage() {
       .eq("user_id", user.id)
       .order("date", { ascending: true }),
     // Active daily habits required to evaluate streak
-    supabase
-      .from("habits")
-      .select("id")
-      .eq("user_id", user.id)
-      .eq("frequency", "daily")
-      .eq("archived", false),
+    fetchActiveDailyHabitIds(supabase, user.id)
+      .then((data) => ({ data, error: null }))
+      .catch((error) => ({ data: null, error })),
   ]);
+
+  const { data: habits, error: habitsError } = habitsResult;
 
   if (checkInsError) {
     console.error("Error loading year check-ins for analytics:", checkInsError);

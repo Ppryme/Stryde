@@ -6,6 +6,8 @@
 // ─────────────────────────────────────────────
 import { getSupabase } from "./supabase";
 import { db } from "./db";
+import { clearLocalHabits } from "@/data/local/habitLocalData";
+import { clearQueue } from "@/data/sync/syncQueue";
 
 // Sign up with email + password
 export async function signUp(email, password, name) {
@@ -61,12 +63,12 @@ export async function signOut() {
 
   try {
     await Promise.all([
-      db.habits.clear(),
+      clearLocalHabits(),
       db.goals.clear(),
       db.checkIns.clear(),
       db.streaks.clear(),
       db.userStreaks.clear(),
-      db.queue.clear(),
+      clearQueue(),
     ]);
   } catch (dbErr) {
     console.error("Failed to clear local DB on signOut:", dbErr);

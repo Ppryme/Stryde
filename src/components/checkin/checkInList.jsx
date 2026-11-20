@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect } from "react";
+import Link from "next/link";
 import useAppStore from "@/stores/useAppStore";
 import CheckInCard from "./CheckInCard";
+import EmptyState from "../ui/EmptyState";
 
 const MILESTONE_THRESHOLDS = new Set([7, 14, 21, 30, 60, 100, 200, 365]);
 
@@ -59,6 +61,8 @@ export default function CheckInList({ habits, checkInMap, userId, today }) {
     }
   }
 
+   
+
 
   return (
     <div className="flex flex-col gap-6">
@@ -75,8 +79,17 @@ export default function CheckInList({ habits, checkInMap, userId, today }) {
           />
         </div>
       </div>
+ 
 
-      {/* Check In Cards */}
+
+    { totalHabits === 0 ? (
+      <EmptyState
+        icon="target"
+        message="No habits yet. Add your first habit and start your streak today."
+        ctaLabel="+ Add a habit"
+        ctaHref="/habits"
+      />
+    ) : (
       <div className="flex flex-col gap-3">
         {activeHabits.map((habit) => {
           const isChecked = !!todayCheckIns[habit.id];
@@ -95,17 +108,15 @@ export default function CheckInList({ habits, checkInMap, userId, today }) {
             
           );
         })}
+      </div> )}
 
-          <div className="flex justify-center">
+      <div className="flex justify-center">
           {isLocked && (<p className="text-bento-muted/90 sm:text-base text-[12px]"> { totalHabits == 1  ? "Task" : ` Tasks`} Completed, Come back and Check in Tomorrow</p>)}
-          </div>
-          
-        
-      </div>
+       </div>
 
       {/* Floating Add Habit Button */}
-      <a
-        href="/habits/new"
+      <Link
+        href="/habits"
         className="fixed bottom-20 right-6 z-40 flex items-center justify-center w-14 h-14 rounded-full bg-stryde-primary text-white shadow-lg shadow-stryde-primary/30 hover:scale-110 active:scale-95 hover:bg-stryde-primary-dark transition-all duration-200 cursor-pointer"
         aria-label="Add habit"
       >
@@ -122,7 +133,7 @@ export default function CheckInList({ habits, checkInMap, userId, today }) {
             d="M12 4v16m8-8H4"
           />
         </svg>
-      </a>
+      </Link>
     </div>
   );
 }

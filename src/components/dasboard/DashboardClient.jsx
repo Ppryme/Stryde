@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useCallback } from "react";
+import Link from "next/link";
 import useAppStore from "@/stores/useAppStore";
 import ProgressRing from "@/components/ui/ProgressRing";
 import StreakBadge from "@/components/streaks/StreakBadge";
@@ -103,16 +104,27 @@ export default function DashboardClient({ userId, initialHabits, initialCheckedI
             Daily habits
           </h2>
           <div className="flex items-center gap-2">
-            <a
-              href="/habits/new"
-              className="flex items-center justify-center p-1 rounded-md text-bento-muted hover:text-stryde-primary hover:bg-bento-border transition-all"
-              aria-label="Create a habit"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-              </svg>
-            </a>
-          </div>
+      {/* Floating Add Habit Button */}
+        <Link
+          href="/habits"
+          className=" flex items-center justify-center w-7 h-7 rounded-full bg-stryde-primary text-white shadow-lg shadow-stryde-primary/30 hover:scale-110 active:scale-95 hover:bg-stryde-primary-dark transition-all duration-200 cursor-pointer"
+          aria-label="Add habit"
+        >
+          <svg
+            className="w-6 h-6"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2.5}
+              d="M12 4v16m8-8H4"
+            />
+          </svg>
+        </Link>
+     </div>
         </div>
 
         {totalHabits === 0 ? (
@@ -120,11 +132,11 @@ export default function DashboardClient({ userId, initialHabits, initialCheckedI
             icon="target"
             message="No habits yet. Add your first habit and start your streak today."
             ctaLabel="+ Add a habit"
-            ctaHref="/habits/new"
+            ctaHref="/habits"
           />
         ) : (
           <div className="flex flex-col gap-2">
-            {dailyHabits.slice(0, 4).map((habit) => (
+            {dailyHabits.map((habit) => (
               <HabitCard
                 key={habit.id}
                 habit={habit}

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase-server";
+import { insertGoalRemote } from "@/data/remote/goalRemoteData";
 
 /**
  * Server Action: create a new goal, invalidate the server cache for both
@@ -15,9 +16,9 @@ import { createClient } from "@/lib/supabase-server";
 export async function createGoalAction(payload) {
   const supabase = await createClient();
 
-  const { error } = await supabase.from("goals").insert(payload);
-
-  if (error) {
+  try {
+    await insertGoalRemote(supabase, payload);
+  } catch (error) {
     // Return an error object so the client can display it
     return { error: error.message };
   }

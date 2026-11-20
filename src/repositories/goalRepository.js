@@ -1,49 +1,98 @@
-import { db } from "@/lib/db";
+// src/repositories/goalRepository.js
+// ─────────────────────────────────────────────
+// Coordinates local writes, remote persistence, and
+// offline queue management for goals.
+//
+// PUBLIC API (preserved):
+//   createGoal(goalData)          → returns localId
+//   updateGoal(id, updates, uId)  → returns true
+//   deleteGoal(id, uId)           → returns true
+//   getGoals(userId, status)      → returns Promise<Array>
+// ─────────────────────────────────────────────
 import { getSupabase } from "@/lib/supabase";
+import {
+  saveLocalGoal,
+  updateLocalGoal,
+  deleteLocalGoal,
+  getLocalGoalsByUserId,
+} from "@/data/local/goalLocalData";
+import {
+  insertGoalRemote,
+  updateGoalRemote,
+  deleteGoalRemote,
+} from "@/data/remote/goalRemoteData";
+import { toRemoteGoal, toRemoteGoalUpdates } from "@/data/mappers/goalMapper";
+import {
+  enqueueOperation,
+  getPendingOperations,
+  QUEUE_STATUS,
+} from "@/data/sync/syncQueue";
+
+// ── Helpers ──────────────────────────────────────────────────────────────
+
+/**
+ * Checks whether an earlier operation for this goal is pending in the queue.
+ * Ensures strict FIFO ordering so an update/delete never jumps ahead of a create.
+ */
+async function hasEarlierPendingGoalOperation(goalId) {
+  if (!goalId) return false;
+  const strId = String(goalId);
+  const pending = await getPendingOperations();
+  return pending.some(
+    (item) =>
+      item.status === QUEUE_STATUS.PENDING &&
+      (item.entityId === goalId ||
+        item.entityId === strId ||
+        item.payload?.id === goalId ||
+        String(item.payload?.id) === strId)
+  );
+}
+
+// ── Repository ───────────────────────────────────────────────────────────
 
 export const GoalRepository = {
   /**
    * Creates a goal locally and syncs to Supabase or queues offline.
+   *
    * @param {Object} goalData
+   * @returns {Promise<string|number>} The local goal ID.
    */
   async createGoal(goalData) {
     const userId = goalData.user_id || goalData.userId;
+    const now = new Date().toISOString();
     const localRecord = {
       ...goalData,
       userId,
       status: goalData.status || "active",
-      createdAt: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
+      createdAt: goalData.createdAt || goalData.created_at || now,
+      updated_at: goalData.updated_at || goalData.updatedAt || now,
     };
 
-    // 1. Save to IndexedDB goals store
-    const localId = await db.goals.add(localRecord);
+    // 1. Save to IndexedDB goals store immediately (offline-safe)
+    const localId = await saveLocalGoal(localRecord);
+    const persistedRecord = { ...localRecord, id: localId };
 
     // 2. Sync to Supabase if online, otherwise queue
     if (navigator.onLine) {
       try {
         const supabase = getSupabase();
-        await supabase.from("goals").insert({
-          user_id: userId,
-          title: goalData.title,
-          description: goalData.description,
-          target_date: goalData.target_date || goalData.targetDate,
-          progress_pct: goalData.progress_pct ?? goalData.progressPct ?? 0,
-          status: goalData.status || "active",
-        });
+        const remoteRecord = toRemoteGoal(persistedRecord);
+        await insertGoalRemote(supabase, remoteRecord);
       } catch (err) {
-        console.warn("Network sync failed, queueing goal creation:", err);
-        await db.queue.add({
+        console.warn("[GoalRepository] Remote create failed, queueing:", err.message || err);
+        await enqueueOperation({
           type: "CREATE_GOAL",
-          payload: { ...localRecord, id: localId },
-          createdAt: new Date().toISOString(),
+          payload: persistedRecord,
+          entityId: String(localId),
+          createdAt: now,
         });
       }
     } else {
-      await db.queue.add({
+      await enqueueOperation({
         type: "CREATE_GOAL",
-        payload: { ...localRecord, id: localId },
-        createdAt: new Date().toISOString(),
+        payload: persistedRecord,
+        entityId: String(localId),
+        createdAt: now,
       });
     }
 
@@ -52,36 +101,39 @@ export const GoalRepository = {
 
   /**
    * Updates an existing goal locally and syncs to Supabase.
+   *
    * @param {string|number} id
    * @param {Object} updates
    * @param {string} [userId]
+   * @returns {Promise<boolean>}
    */
   async updateGoal(id, updates, userId) {
     const updatedAt = new Date().toISOString();
-    // 1. Update local Dexie DB immediately
-    await db.goals.update(id, { ...updates, updated_at: updatedAt });
+    const localUpdates = { ...updates, updated_at: updatedAt };
 
-    // 2. Try pushing to Supabase if online, otherwise queue it
-    if (navigator.onLine) {
+    // 1. Update local Dexie DB immediately
+    await updateLocalGoal(id, localUpdates);
+
+    // 2. Sync to Supabase if online & no earlier pending operations exist
+    if (navigator.onLine && !(await hasEarlierPendingGoalOperation(id))) {
       try {
         const supabase = getSupabase();
-        let query = supabase.from("goals").update({ ...updates, updated_at: updatedAt }).eq("id", id);
-        if (userId) {
-          query = query.eq("user_id", userId);
-        }
-        await query;
+        const remoteUpdates = toRemoteGoalUpdates(localUpdates);
+        await updateGoalRemote(supabase, id, remoteUpdates, userId);
       } catch (err) {
-        console.warn("Network sync failed, queueing update:", err);
-        await db.queue.add({
+        console.warn("[GoalRepository] Remote update failed, queueing:", err.message || err);
+        await enqueueOperation({
           type: "UPDATE_GOAL",
           payload: { id, updates, userId },
+          entityId: String(id),
           createdAt: updatedAt,
         });
       }
     } else {
-      await db.queue.add({
+      await enqueueOperation({
         type: "UPDATE_GOAL",
         payload: { id, updates, userId },
+        entityId: String(id),
         createdAt: updatedAt,
       });
     }
@@ -91,35 +143,37 @@ export const GoalRepository = {
 
   /**
    * Deletes a goal locally and syncs to Supabase.
+   *
    * @param {string|number} id
    * @param {string} [userId]
+   * @returns {Promise<boolean>}
    */
   async deleteGoal(id, userId) {
+    const now = new Date().toISOString();
+
     // 1. Delete from local Dexie DB
-    await db.goals.delete(id);
+    await deleteLocalGoal(id);
 
     // 2. Sync to Supabase or queue
-    if (navigator.onLine) {
+    if (navigator.onLine && !(await hasEarlierPendingGoalOperation(id))) {
       try {
         const supabase = getSupabase();
-        let query = supabase.from("goals").delete().eq("id", id);
-        if (userId) {
-          query = query.eq("user_id", userId);
-        }
-        await query;
+        await deleteGoalRemote(supabase, id, userId);
       } catch (err) {
-        console.warn("Network sync failed, queueing delete:", err);
-        await db.queue.add({
+        console.warn("[GoalRepository] Remote delete failed, queueing:", err.message || err);
+        await enqueueOperation({
           type: "DELETE_GOAL",
           payload: { id, userId },
-          createdAt: new Date().toISOString(),
+          entityId: String(id),
+          createdAt: now,
         });
       }
     } else {
-      await db.queue.add({
+      await enqueueOperation({
         type: "DELETE_GOAL",
         payload: { id, userId },
-        createdAt: new Date().toISOString(),
+        entityId: String(id),
+        createdAt: now,
       });
     }
 
@@ -127,17 +181,14 @@ export const GoalRepository = {
   },
 
   /**
-   * Queries goals for a specific user.
+   * Queries goals for a specific user from local IndexedDB.
+   *
    * @param {string} userId
    * @param {string} [status]
+   * @returns {Promise<Array>}
    */
   async getGoals(userId, status) {
-    if (!userId) return [];
-    let query = db.goals.where("userId").equals(userId);
-    if (status) {
-      query = query.and((g) => g.status === status);
-    }
-    return query.toArray();
+    return getLocalGoalsByUserId(userId, status);
   },
 };
 

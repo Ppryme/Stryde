@@ -1,6 +1,8 @@
 import { createClient } from "@/lib/supabase-server";
 import { requireOnboardedUser } from "@/lib/auth-server";
 import { getLocalDateString, getGreeting } from "@/lib/date";
+import { fetchActiveDailyHabits } from "@/data/remote/habitRemoteData";
+import { fetchActiveGoals } from "@/data/remote/goalRemoteData";
 import DashboardClient from "@/components/dasboard/DashboardClient";
 import GoalCard from "@/components/goals/GoalCard";
 import SignOutButton from "@/components/ui/Reusable/SignOutButton";
@@ -15,29 +17,25 @@ export default async function DashboardHome() {
   const today = getLocalDateString();
 
   const [
-    { data: habits, error: habitsError },
+    habitsResult,
     { data: checkIns, error: checkInsError },
-    { data: goals, error: goalsError },
+    goalsResult,
   ] = await Promise.all([
-    supabase
-      .from("habits")
-      .select("*")
-      .eq("user_id", user.id)
-      .eq("archived", false)
-      .eq("frequency", "daily")
-      .order("order_index", { ascending: true }),
+    fetchActiveDailyHabits(supabase, user.id)
+      .then((data) => ({ data, error: null }))
+      .catch((error) => ({ data: null, error })),
     supabase
       .from("check_ins")
       .select("habit_id, completed")
       .eq("user_id", user.id)
       .eq("date", today),
-    supabase
-      .from("goals")
-      .select("*")
-      .eq("user_id", user.id)
-      .eq("status", "active")
-      .order("created_at", { ascending: false }),
+    fetchActiveGoals(supabase, user.id)
+      .then((data) => ({ data, error: null }))
+      .catch((error) => ({ data: null, error })),
   ]);
+
+  const { data: habits, error: habitsError } = habitsResult;
+  const { data: goals, error: goalsError } = goalsResult;
 
   if (habitsError) {
     console.error("Error loading habits on dashboard:", habitsError);

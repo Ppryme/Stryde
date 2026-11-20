@@ -34,3 +34,19 @@ This document tracks issues, bugs, and errors encountered during development, al
   * Throw explicit descriptive errors on failure so the Next.js `(app)/error.jsx` boundary catches them and displays a user-friendly error UI with a "Try again" action.
 
 ---
+
+## 3. Global Loading Overlay on Navigation ("Syncing offline changes...")
+
+* **Issue:**
+  * Deleting a habit on the dashboard and then clicking the "+" icon to navigate to `/habits/new` triggered a blocking global loading overlay with "Syncing offline changes..." for over 800ms.
+* **Root Causes:**
+  * **Unfiltered `user_id` query:** `archiveHabitRemote` unconditionally chained `.eq("user_id", userId)` when `userId` was not provided, generating an invalid query (`user_id=eq.undefined`) that caused Supabase to reject the online delete.
+  * **Fallback Queue Pollution:** Because the online call failed, `HabitRepository` enqueued an `ARCHIVE_HABIT` item into IndexedDB `db.queue` even while online.
+  * **Hard Navigation:** The "+" button used `<a href="/habits/new">` instead of Next.js `<Link>`, causing a full page remount of `<AppShell>`.
+  * **Blocking Sync in AppShell:** `AppShell` checked `db.queue.toArray()` on mount, saw the queued item, and called `showLoading("Syncing offline changes...")` with an artificial 800ms minimum delay, directly violating `ARCHITECTURE.md`'s rule against blocking the UI for background sync.
+* **Fix & Prevention:**
+  * In `habitRemoteData.js`, conditionally apply the `user_id` filter only when `userId` is defined (`if (userId) query = query.eq("user_id", userId)`).
+  * In `AppShell.jsx`, run `syncQueue()` silently in the background without invoking `showLoading()` or artificial timeouts.
+  * In `DashboardClient.jsx` and `checkInList.jsx`, replace `<a href="/habits/new">` with Next.js `<Link href="/habits/new">` for smooth client-side routing.
+
+---

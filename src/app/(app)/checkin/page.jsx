@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase-server";
 import { requireOnboardedUser } from "@/lib/auth-server";
 import { getLocalDateString, getGreeting } from "@/lib/date";
+import { fetchActiveDailyHabits } from "@/data/remote/habitRemoteData";
 import CheckInList from "@/components/checkin/checkInList";
 import SignOutButton from "@/components/ui/Reusable/SignOutButton";
 
@@ -13,22 +14,20 @@ export default async function CheckInPage() {
   const today = getLocalDateString();
 
   const [
-    { data: habits, error: habitsError },
+    habitsResult,
     { data: checkIns, error: checkInsError },
   ] = await Promise.all([
-    supabase
-      .from("habits")
-      .select("*")
-      .eq("user_id", user.id)
-      .eq("archived", false)
-      .eq("frequency", "daily")
-      .order("order_index", { ascending: true }),
+    fetchActiveDailyHabits(supabase, user.id)
+      .then((data) => ({ data, error: null }))
+      .catch((error) => ({ data: null, error })),
     supabase
       .from("check_ins")
       .select("habit_id, completed, note")
       .eq("user_id", user.id)
       .eq("date", today),
   ]);
+
+  const { data: habits, error: habitsError } = habitsResult;
 
   if (habitsError) {
     console.error("Error loading habits on check-in page:", habitsError);
@@ -44,6 +43,8 @@ export default async function CheckInPage() {
   (checkIns ?? []).forEach((c) => {
     checkInMap[c.habit_id] = { completed: c.completed, note: c.note };
   });
+
+  
 
   return (
     <div className="px-4 pt-10 pb-6 mx-auto max-w-6xl sm:px-6 lg:px-8">

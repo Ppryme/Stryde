@@ -18,7 +18,7 @@ export function useOnline() {
         };
 
     check(); // initial check
-    const interval = setInterval(check, 30000); // every 30 sec
+    const interval = setInterval(check, 50000); // every 50 sec
     window.addEventListener("online", check);
     window.addEventListener("offline", () => setIsOnline(false));
 

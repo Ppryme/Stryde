@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { getSupabase } from "@/lib/supabase";
 import { getLocalDateString } from "@/lib/date";
+import { getActiveDailyHabits } from "@/data/local/habitLocalData";
 import {
   computeMissedDayPenalty,
   computeOverallStreakFromCheckIns,
@@ -161,11 +162,7 @@ export const UserStreakRepository = {
     if (!userId) return false;
 
     try {
-      const activeHabits = await db.habits
-        .where("userId")
-        .equals(userId)
-        .and((h) => h.frequency === "daily" && !h.archived)
-        .toArray();
+      const activeHabits = await getActiveDailyHabits(userId);
 
       if (activeHabits.length === 0) return false;
 
@@ -289,10 +286,7 @@ export const UserStreakRepository = {
     if (!userId) return 0;
 
     try {
-      const activeHabits = await db.habits
-        .where("userId").equals(userId)
-        .and((h) => h.frequency === "daily" && !h.archived)
-        .toArray();
+      const activeHabits = await getActiveDailyHabits(userId);
 
       if (activeHabits.length === 0) return 0;
 

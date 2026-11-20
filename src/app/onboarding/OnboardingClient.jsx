@@ -8,6 +8,7 @@ import Button from "@/components/ui/button";
 import FormError from "@/components/ui/FormError";
 import Input from "@/components/ui/Input";
 import { getSupabase } from "@/lib/supabase";
+import { insertHabitsRemoteBatch } from "@/data/remote/habitRemoteData";
 import { GoalRepository } from "@/repositories/goalRepository";
 import { HABIT_CATEGORIES } from "@/lib/design-token";
 import useAppStore from "@/stores/useAppStore";
@@ -163,8 +164,9 @@ export default function OnboardingClient() {
         order_index: idx,
       }));
 
-      const { error: insertError } = await supabase.from("habits").insert(habitsToInsert);
-      if (insertError) {
+      try {
+        await insertHabitsRemoteBatch(supabase, habitsToInsert);
+      } catch (insertError) {
         setError("Failed to create habits. Please try again.");
         setLoading(false);
         hideLoading();
